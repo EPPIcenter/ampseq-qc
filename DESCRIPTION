@@ -1,0 +1,9 @@
+Package: ampseq-qc
+Type: Package
+Title: QC Summary Shiny App
+Version: 0.1.0
+Author: EPPIcenter
+Maintainer: kathryn.murie@ucsf.edu
+Description: A Shiny app for visualizing QC summary data from ampseq data
+Depends: R (>= 3.5.0), shiny, shinyFiles, ggplot2, dplyr, tidyr, ggbeeswarm, stringr
+License: MIT
