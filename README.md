@@ -88,3 +88,9 @@ This will launch the Shiny app on your local machine where you can interactively
 * Add option for well instead of row, column
 * manifest could be tsv, csv...
 * Write a generate manifest function which populates sampleID with the columns from madhatter repo
+
+## Acknowledgments
+This code is based on QC plots developed by 
+* Andrés Aranda-Diaz
+* Jessica Briggs
+* Will Louie
