@@ -64,7 +64,14 @@ server <- function(input, output, session) {
     dir_path()
   })
   
-  
+#   # Define a reusable color palette
+#   sample_colours <- c(
+#     "negative" = "pink",
+#     "positive" = "orange",
+#     "sample" = "darkgrey",
+#     "NA" = "white"
+#   )
+
   # Reactive functions for loading predefined files
   sample_coverage <- reactive({ load_file("sample_coverage.txt", dir_path()) })
   amplicon_coverage <- reactive({ load_file("amplicon_coverage.txt", dir_path()) })

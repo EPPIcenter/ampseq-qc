@@ -1,12 +1,12 @@
 # R/plots.R
 
-# Define a reusable color palette
 sample_colours <- c(
-  "negative" = "darkred",
-  "positive" = "darkblue",
-  "sample" = "darkgrey",
-  "NA" = "white"
+    "negative" = "firebrick3",
+    "positive" = "blue3",
+    "sample" = "darkgrey",
+    "NA" = "white"
 )
+
 
 # Function to generate the dimer plot
 generate_dimer_plot <- function(sample_coverage_with_manifest, sample_colours) {
@@ -20,7 +20,7 @@ generate_dimer_plot <- function(sample_coverage_with_manifest, sample_colours) {
     ylab("% Dimers") +
     xlab("Input Reads") +
     ggtitle("Dimer Content") +
-    scale_color_manual(values = sample_colours) 
+    scale_color_manual(values = sample_colours)
 }
 
 # Function to generate the balancing plot
