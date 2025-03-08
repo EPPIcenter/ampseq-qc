@@ -50,16 +50,7 @@ The notebook provides the following analyses:
 Note: A locus is considered successfully amplified if it has more than `read_threshold` reads, where `read_threshold` is a threshold that can be set below.
 
 
-```{r}
-# TODO: Extract out the functions as a package 
-# TODO: Turn this into an R shiny app 
-# TODO: Make sure that it works with multiple plates etc and plots format correctly
-# TODO: Add option for well instead of row, column
-# TODO: manifest could be tsv, csv...
-# TODO: Write a generate manifest function which populates sampleID with the columns from madhatter repo
-```
-
-## Setup 
+## Setup
 
 ```{r}
 # User input 
@@ -69,15 +60,33 @@ results_dir <- "data/example_mad4hatter_pipeline_output_larger"
 manifest_file <- "data/manifest_large_multibatch.csv"
 # Path to outputs
 reprep_repool_summary_path <- "reprep_repool_summary.csv"
+polyclonal_information_path <- "positive_control_polyclonal_info.csv"
+neg_control_information_path <- "negative_control_amplified_loci.csv"
 ```
 
 ```{r}
+# Jessica output 
+results_dir <- "data/Jessica_results_example"
+manifest_file <- "data/Jessica_manifest.csv"
+```
+
+```{r}
+# Jessica output 2
+results_dir <- "data/Jessica_results_example_nextseq"
+manifest_file <- "data/Jessica_manifest_nextseq.csv"
+```
+
+```{r}
+# If TRUE, trims extra sequencing-related information from SampleID to match the manifest format
+standardise_sampleID <- TRUE
 # Input a threshold for the reads needed to classify a locus as having amplified successfully
 read_threshold <- 100
 # Input a minimum Reads per ASV used as a filter for the positive control plot
-read_filter <- 1 
+read_filter <- 0 
 # Minimum Allele Frequency per ASV used as a filter for positive control plot 
-af_filter <- 0.2
+af_filter <- 0
+# Read threshold to output locus information for negative control
+negative_control_read_threshold <- 50 
 # Proportion of targets successfully amplified; samples below this threshold require re-prep
 reprep_threshold <- 0.5 
 # Proportion of targets successfully amplified; samples below this threshold require re-pool
@@ -86,6 +95,7 @@ repool_threshold <- 0.75
 
 ```{r}
 # Print summary of user inputs
+cat("User Input Summary\n")
 cat("Results Directory:", results_dir, "\n")
 cat("Manifest File:", manifest_file, "\n")
 cat("Read Threshold for Successful Amplification:", read_threshold, "\n")
@@ -94,6 +104,7 @@ cat("Minimum Allele Frequency per ASV (Positive Control Filter):", af_filter, "\
 ```
 
 ```{r}
+# Create file paths 
 sample_coverage_file <- file.path(results_dir,"sample_coverage.txt")
 amplicon_coverage_file <- file.path(results_dir,"amplicon_coverage.txt")
 allele_data_path <- file.path(results_dir, "allele_data.txt")
@@ -121,34 +132,66 @@ amplicon_coverage <- read.delim(amplicon_coverage_file)
 ```
 
 ```{r}
-# Remove species loci
 amplicon_coverage <- amplicon_coverage %>%
-  filter(!grepl("-1AB$", Locus))
-allele_data <- allele_data %>% 
-    filter(!grepl("-1AB$", Locus))
+  mutate(SampleID = if (standardise_sampleID) SampleID %>%
+           sub("_L001$", "", .) %>%
+           word(., start = 1, end = -2, sep = "_") else SampleID) %>%
+           filter(!grepl("-1AB$|-1B2$", Locus)) 
+allele_data <- allele_data %>%
+  mutate(SampleID = if (standardise_sampleID) SampleID %>%
+           sub("_L001$", "", .) %>%
+           word(., start = 1, end = -2, sep = "_") else SampleID) %>%
+           filter(!grepl("-1AB$|-1B2$", Locus)) 
 ```
 
 ```{r}
-merge_data <- function(manifest, sample_coverage) {
+# Count the number of loci per reaction
+nloci_table <- allele_data %>%
+  distinct(Locus) %>% 
+  mutate(reaction = str_extract(Locus, "\\d(?=[A-Z]*$)")) %>%
+  count(reaction) %>%
+  rename(nreactionloci = n) 
+nloci_table
+```
+
+```{r}
+# If the number of loci per reaction above are incorrect then you can override them below 
+
+# Manually define the values 
+# reaction1_loci <- 205
+# reaction2_loci <- 31
+
+# # Put into a table
+# nloci_table <- data.frame(
+#   reaction = c('1', '2'),
+#   nreactionloci = c(reaction1_loci, reaction2_loci)
+# )
+# nloci_table
+```
+
+```{r}
+merge_data <- function(manifest, sample_coverage, standardise_sampleID) {
     merged_data <- sample_coverage %>%
+        mutate(SampleID = if (standardise_sampleID) SampleID %>%
+               sub("_L001$", "", .) %>%
+               word(., start = 1, end = -2, sep = "_") else SampleID) %>%
         mutate(Reads = as.numeric(Reads)) %>% 
         replace_na(list(Reads = 0)) %>%
         pivot_wider(names_from = Stage, values_from = Reads) %>%
-        left_join(manifest, by = "SampleID") 
-  
+        inner_join(manifest, by = "SampleID") 
     return(merged_data)
 }
 ```
 
 ```{r}
 # Reformat sample_coverage and add sample information from manifest 
-sample_coverage_with_manifest <- merge_data(manifest, sample_coverage)
+sample_coverage_with_manifest <- merge_data(manifest, sample_coverage, standardise_sampleID)
 ```
 
 ```{r}
-# Add Columns to amplicons to specify experiment, SampleType
-amplicon_coverage_with_manifest = amplicon_coverage %>%
-  left_join(manifest,by = c("SampleID"))
+# Add manifest to amplicon coverage
+amplicon_coverage_with_manifest <- amplicon_coverage %>%
+    inner_join(manifest,by = c("SampleID"))
 ```
 
 ```{r}
@@ -162,10 +205,8 @@ amplicon_coverage_with_manifest <- amplicon_coverage_with_manifest %>%
 ```{r}
 # Create sample summary stats 
 summary_samples <- amplicon_coverage_with_manifest %>%
-  # Count unique loci per reaction
-  group_by(reaction) %>%
-  mutate(nreactionloci = n_distinct(Locus)) %>%
-  ungroup() %>%
+  # Join the nloci_table
+  left_join(nloci_table, by = "reaction") %>%
   # Calculate number of loci with reads over threshold per reaction
   group_by(SampleID, Batch, SampleType, reaction, nreactionloci) %>%
   summarize(
@@ -179,7 +220,7 @@ summary_samples <- amplicon_coverage_with_manifest %>%
       ) %>%
   ungroup() %>%
   mutate(prop_good_loci = n_good_loci / nreactionloci) %>%
-  left_join(manifest, by = join_by(SampleID, Batch, SampleType))
+  inner_join(manifest, by = join_by(SampleID, Batch, SampleType))
 ```
 
 ```{r}
@@ -192,6 +233,15 @@ sample_colours <- c(
 )
 ```
 
+```{r}
+# Print summary of samples in files
+cat("Sample Summary\n")
+cat(length(unique(manifest$SampleID)), "samples in manifest", "\n")
+cat(length(unique(allele_data$SampleID)), "samples in allele data file", "\n")
+cat(length(unique(sample_coverage_with_manifest$SampleID)), "samples in manifest and sample coverage file", "\n")
+cat(length(unique(amplicon_coverage_with_manifest$SampleID)), "samples in manifest and amplicon coverage file", "\n")
+```
+
 ## Primer Dimer Content
 
 Here we visualise the proportion of sequencing reads that are classified as primer dimers, which occur when primers anneal to each other instead of the target DNA. This plot is useful for assessing the efficiency of the amplification process, as high primer dimer levels can indicate suboptimal reaction conditions, reduced sequencing efficiency, and potential issues with sample quality or reagent performance.
@@ -199,11 +249,14 @@ Here we visualise the proportion of sequencing reads that are classified as prim
 ```{r}
 # Function to generate the plot
 generate_dimer_plot <- function(sample_coverage_with_manifest, sample_colours) {
-    dimer_plot <- ggplot(data = sample_coverage_with_manifest) +
+    
+    dimer_plot <- ggplot(data = sample_coverage_with_manifest %>%  arrange(desc(SampleType))) +
       # Plot points with different colors for each sample type
       geom_point(aes(x = Input + 0.9, 
                      y = (1 - OutputPostprocessing / Input) * 100, 
                      color = SampleType),
+                 shape = 1, 
+                 alpha=0.8,
                  stroke = 1) +
     # Log scale for the x-axis
     scale_x_log10() +
@@ -310,6 +363,16 @@ ggplot(result, aes(x = SampleID, y = Count, fill = Category)) +
   scale_fill_manual(values = c("Polyclonal" = "steelblue", "Monoclonal" = "gray70"))
 ```
 
+```{r}
+polyclonal_information <- pos_control_data %>%
+  inner_join(locus_summary, by = c("SampleID", "Locus")) %>%
+  filter(Meets_Multi_ASV_Criteria == TRUE)
+write.csv(polyclonal_information, polyclonal_information_path, row.names = FALSE)
+head(polyclonal_information) |>
+  kable() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
 ### Negative Control Contamination 
 
 #### Read Summary per Negative Control
@@ -330,13 +393,24 @@ ggplot(amplicons_negative) +
     max(amplicons_negative$OutputPostprocessing) == 0,
     1e2,
     max(amplicons_negative$OutputPostprocessing)
-  ) / 50, ifelse(
+  ) / 50,
+  ifelse(
     max(amplicons_negative$OutputPostprocessing) == 0,
     1e2,
-    max(amplicons_negative$OutputPostprocessing)
+    max(amplicons_negative$OutputPostprocessing) + 10 
   )) +
   xlab("Reads") +
   ylab("Count")
+```
+
+```{r}
+neg_control_information <- amplicons_negative %>%
+    filter(OutputPostprocessing > negative_control_read_threshold) %>%
+    select('SampleID','Locus','OutputPostprocessing')
+write.csv(neg_control_information, neg_control_information_path, row.names = FALSE)
+head(neg_control_information_path) |>
+  kable() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
 #### Aggregated Reads per Target
@@ -351,15 +425,19 @@ summary_data <- amplicons_negative %>%
   ungroup()  # Remove the grouping for further operations
 
 # Create the bar plot
-ggplot(summary_data, aes(y = Locus, x = sum_reads, fill = reaction)) +
+ggplot(summary_data, aes(x = Locus, y = sum_reads, fill = reaction)) +
   geom_bar(stat = "identity", position = "dodge") +  # Bar plot with 'sum_reads' on the y-axis
-  xlab("Sum of Sample Reads") +  # Label for the x-axis
-  ylab("Locus") +  # Label for the y-axis
+  xlab("Locus") +  # Label for the x-axis
+  ylab("Sum of Reads Across Controls") +  # Label for the y-axis
   ggtitle("Total Reads per Locus Across Negative Controls") +  # Title of the plot
-  theme(axis.text.x = element_text(angle = 90, hjust = 1), # Rotate x-axis labels if needed
-        plot.margin = margin(0, 0, 0, 0, "cm"),  # Increase the plot's margin to make it wider
-        axis.text = element_text(size = 2),  # Optional: adjust text size
-        axis.title = element_text(size = 12)) +
+  # theme(axis.text.x = element_text(angle = 90, hjust = 1), # Rotate x-axis labels if needed
+  #       axis.text = element_text(size = 2),  # Optional: adjust text size
+  #       axis.title = element_text(size = 12)) +
+  theme(
+    axis.text.x = element_blank(),  # Remove x-axis text labels
+    axis.ticks.x = element_blank(), # Remove x-axis ticks
+    axis.title = element_text(size = 12)
+  ) +
   scale_fill_manual(values = c("steelblue", "orange", "green", "purple"))  # Customize colors per Batch (optional)
     
 ```
@@ -377,9 +455,12 @@ generate_parasitemia_by_amplification_success_plot <- function(summary_samples, 
       geom_point(aes(x = Parasitemia + 0.9, 
                      y = prop_good_loci, 
                      color = SampleType),
+                 shape = 1,
+                 alpha=0.8,
                  stroke = 1) +
     # Log scale for the x-axis
     scale_x_log10() +
+    ylim(0,1) + 
     # Faceting by Batch column
     facet_grid(cols = vars(Batch),rows = vars(reaction),
                scale = "free_y")+
@@ -407,11 +488,14 @@ This illustrates the relationship between the total number of reads per sample a
 # Function to generate the plot
 generate_reads_by_amplification_success_plot <- function(summary_samples, amplification_threshold, 
                                                          sample_colours, reprep_threshold, repool_threshold) {
+    
     amp_plot <- ggplot(data = summary_samples) +
       # Plot points with different colors for each sample type
       geom_point(aes(x = reads_per_sample + 0.9,  
                      y=prop_good_loci,
                      color = SampleType),
+                 shape=1,
+                 alpha=0.8,
                  stroke = 1) +
     # Log scale for the x-axis
     scale_x_log10() +
@@ -469,7 +553,7 @@ write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
 ## Plate Maps
 
 ```{r}
-create_plate_template <- function(batches, nrows=8, ncols=12) {
+create_plate_template <- function(summary_samples, batches, nrows=8, ncols=12) {
     quadrants <-
       expand.grid(
         Batch = batches,
@@ -482,9 +566,16 @@ create_plate_template <- function(batches, nrows=8, ncols=12) {
         xmin = x - 0.45,
         xmax = x + 0.45
       ) %>%
-      mutate(Row = rev(letters[1:nrows])[y]) %>%
+      mutate(Row = (letters[1:nrows])[y]) %>%
+      # left_join(
+      #   summary_samples %>%  select(Batch, Column, Row, SampleType) %>% distinct(),
+      #   by = c("Batch", "x" = "Column", "Row" = "Row")
+      # )
       left_join(
-        summary_samples %>%  select(Batch, Column, Row, SampleType) %>% distinct(),
+        summary_samples %>%
+          mutate(Row = tolower(Row)) %>%  # Convert Row to lowercase in summary_samples
+          select(Batch, Column, Row, SampleType) %>%
+          distinct(),
         by = c("Batch", "x" = "Column", "Row" = "Row")
       )
     return(quadrants)
@@ -492,7 +583,7 @@ create_plate_template <- function(batches, nrows=8, ncols=12) {
 ```
 
 ```{r}
-quadrants <- create_plate_template(unique(summary_samples$Batch))
+quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch))
 ```
 
 ### Plate Layout
@@ -500,7 +591,7 @@ quadrants <- create_plate_template(unique(summary_samples$Batch))
 The plate layout provides a visual representation of sample organization, including the placement of positive and negative controls. This is allows verification that controls are positioned correctly to validate assay performance with later plots.
 
 ```{r}
-plot_plate_layout <- function(summary_samples, sample_colours) {
+plot_plate_layout <- function(summary_samples, quadrants, sample_colours) {
     plate_layout <- ggplot(summary_samples) +
       # Tiles representing sample types, fill based on SampleType
       geom_tile(aes(x = Column, y = Row, fill = SampleType), color = "white") +
@@ -534,7 +625,7 @@ plot_plate_layout <- function(summary_samples, sample_colours) {
 ```
 
 ```{r}
-plot_plate_layout(summary_samples, sample_colours)
+plot_plate_layout(summary_samples, quadrants, sample_colours)
 ```
 
 ### Reads Heatmap
@@ -598,4 +689,5 @@ Here we visualise the success rate of amplification across the plate, allowing f
 ```{r}
 plot_plate_with_feature(summary_samples, sample_colours, "prop_good_loci", 0.5)
 ```
+
 
