@@ -67,6 +67,11 @@ filtered_allele_data_path <- "allele_data_filtered.txt"
 ```
 
 ```{r}
+results_dir <- "data/Jessica_results_example"
+manifest_file <- "data/Jessica_manifest.csv"
+```
+
+```{r}
 # If TRUE, trims extra sequencing-related information from SampleID to match the manifest format
 standardise_sampleID <- TRUE
 # Input a threshold for the reads needed to classify a locus as having amplified successfully
@@ -654,7 +659,7 @@ plot_plate_with_feature <- function(target, allele_data, quadrants, sample_colou
       scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
       xlab("Column") +
       ylab("Row") +
-      ggtitle("Reads per Reaction Heatmap") +
+      ggtitle("Reads for PseudoCIGARs in common") +
       # Theme adjustments
       theme_minimal() +
       theme(
@@ -671,7 +676,9 @@ plot_plate_with_feature <- function(target, allele_data, quadrants, sample_colou
 ```
 
 ```{r}
-plot_plate_with_feature("Negative-Control-2", allele_data, quadrants, sample_colours, "log10(common_reads+0.1)", 2, "log10(common_reads)")
+# Input the 
+negative_control_name <- "Negative-Control-4"
+plot_plate_with_feature(negative_control_name, allele_data, quadrants, sample_colours, "log10(common_reads+0.1)", 2, "log10(common_reads)")
 ```
 
 ## Successul Amplification
