@@ -33,18 +33,19 @@ Additionally, a **sample manifest** is required. This file must contain the foll
 ## QC Summaries
 The notebook provides the following analyses:
 
+* **Plate Layout**: Location of samples and controls on the plate
 * **Primer Dimer Content**: Input reads vs. % attributed to primer dimers 
 * **Balancing Across Batches**: Swarm plot of reads output by the pipeline by batch
-* **Successul Amplification** summary, including:
-    * Sample Reads vs. Number of Successfully Amplified Loci
-    * Parasitemia vs. Number of Successfully Amplified Loci
-* **Plate Maps**, including:
-    * Plate Layout
-    * Reads Heatmap
-    * Successful Amplification Heatmap
 * **Control Summary**, including:  
     * Polyclonality of Positive Controls
     * Read Summary for Negative Controls
+    * Contamination Maps for Negative Controls
+* **Successul Amplification** summary, including:
+    * Sample Reads vs. Number of Successfully Amplified Loci
+    * Parasitemia vs. Number of Successfully Amplified Loci
+* **Amplification Plate Maps**, including:
+    * Reads Heatmap
+    * Successful Amplification Heatmap
  
       
 Note: A locus is considered successfully amplified if it has more than `read_threshold` reads, where `read_threshold` is a threshold that can be set below.
@@ -287,6 +288,93 @@ cat(length(unique(sample_coverage$SampleID)), "samples in manifest and sample co
 cat(length(unique(amplicon_coverage$SampleID)), "samples in manifest and amplicon coverage file", "\n")
 ```
 
+## Plate Layout
+
+The plate layout provides a visual representation of sample organization, including the placement of positive and negative controls. This is allows verification that controls are positioned correctly to validate assay performance with later plots.
+
+```{r}
+create_plate_template <- function(summary_samples, batches, nrows=8, ncols=12) {
+    quadrants <-
+      expand.grid(
+        Batch = batches,
+        y = 1:nrows,
+        Column = 1:ncols
+      ) %>%
+      mutate(
+        ymin = y - 0.45,
+        ymax = y + 0.45,
+        xmin = Column - 0.45,
+        xmax = Column + 0.45
+      ) %>%
+      mutate(Row = toupper(rev(letters[1:nrows])[y])) %>%
+      # Join on the sample information to the plate
+      left_join(
+        summary_samples %>%
+          select(Batch, Column, Row, SampleType) %>%
+          distinct(),
+        by = c("Batch", "Column", "Row" = "Row")
+      )
+    return(quadrants)
+}
+```
+
+```{r}
+quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch))
+```
+
+```{r}
+plot_plate_layout <- function(quadrants, sample_colours) {
+    # Ensure that NAs in SampleType are replaced with "NA" string (or another label)
+    quadrants$SampleType[is.na(quadrants$SampleType)] <- "empty"
+    plate_layout <- ggplot(quadrants) +
+      # Tiles representing sample types, fill based on SampleType
+      geom_tile(aes(x = Column, y = y, fill = SampleType), color = "white") +
+      # Facet by Batch
+      facet_wrap(vars(Batch), ncol = 1) +
+      scale_y_continuous(breaks = quadrants$y, labels = quadrants$Row) +
+      # Make sure labels are correct
+      xlab("Column") +
+      ylab("Row") +
+      # Customizing the x-axis
+      scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
+      # Quadrants as rectangles with borders
+      geom_rect(
+        data = quadrants,
+        aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+        color = "black", fill = NA, linewidth = 1
+      ) +
+      # Custom fill colors for each SampleType
+      scale_fill_manual(
+        values = sample_colours
+      ) +
+      # Theming
+      theme_minimal() +
+      theme(
+        axis.text = element_text(size = 12),  
+        strip.text = element_text(size = 14, face = "bold"), 
+        panel.grid = element_blank(),  
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      ) +
+    # Customizing the legend to add an outline for the colored squares
+    guides(
+      fill = guide_legend(
+        override.aes = list(
+          color = "black",  # Outline color for the squares
+          size = 1          # Outline size for the squares
+        )
+      )
+    ) +
+    # Title for the plot
+    ggtitle("Sample Types and Quadrants Distribution by Batch")+
+    coord_fixed(ratio = 0.75)
+    print(plate_layout)
+}
+```
+
+```{r}
+plot_plate_layout(quadrants, sample_colours)
+```
+
 ## Primer Dimer Content
 
 Here we visualise the proportion of sequencing reads that are classified as primer dimers, which occur when primers anneal to each other instead of the target DNA. This plot is useful for assessing the efficiency of the amplification process, as high primer dimer levels can indicate suboptimal reaction conditions, reduced sequencing efficiency, and potential issues with sample quality or reagent performance.
@@ -474,10 +562,6 @@ head(neg_control_information_path) |>
 This plot aggregates the total reads for each locus across all negative controls. In negative controls, if there is an unexpected spike in reads for specific loci, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific loci where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
 
 ```{r}
-# library(tibble)  # Ensure tibble is loaded
-# library(ggplot2)  # For plotting
-# library(plotly)  # For interactivity
-
 # Get reads for each locus, label reaction and extract chrom and start from locus name
 summary_data <- amplicons_negative %>%
   group_by(reaction, Locus) %>%
@@ -519,6 +603,75 @@ p <- ggplot(summary_data, aes(x = Locus, y = sum_reads, fill = reaction, text = 
 
 # Convert to interactive plotly plot
 ggplotly(p, tooltip = "text")
+```
+
+#### Negative Control Contamination Maps
+
+```{r}
+plot_plate_with_feature <- function(target, allele_data, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
+
+    target_data <- allele_data %>% filter(SampleID == target)
+    comparison <- target_data %>% 
+        inner_join(allele_data, by = c("Locus","PseudoCIGAR"), suffix = c("_target", "")) %>%
+        group_by(SampleID_target, SampleID, PseudoCIGAR) %>%
+        summarise(
+            common_count = n(),  # Count the number of times the PseudoCIGAR is shared
+            common_reads = sum(Reads_target + Reads, na.rm = TRUE),  # Sum the reads of both samples
+            .groups = "drop"
+        )
+    comparison_plate <- comparison %>%
+      inner_join(manifest, by = "SampleID")
+    
+    # Merge comparison_plate with quadrants to include reads_per_reaction
+    merged_data <- merge(comparison_plate, quadrants, by = c("Batch", "Row", "Column", "SampleType"), all.y = TRUE)
+    
+    # Ensure NAs in SampleType are labeled
+    merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
+    
+    # Create a new column to identify the target sample
+    merged_data$target <- ifelse(merged_data$SampleID == target, "target", "other")
+
+    # Create the heatmap plot
+    plate_layout <- ggplot(merged_data) +
+      # Heatmap fill based on reads_per_reaction
+      geom_tile(aes(x = Column, y = y, fill = !!rlang::parse_expr(fill_param)), color = NA, width = 0.95, height = 0.95) +
+      # Separate tile layer for outlines
+      geom_rect(data = merged_data,
+                aes(xmin = Column-0.45, xmax = Column+0.45, ymin = y-0.45, ymax = y+0.45, color = target), 
+                fill = NA, linewidth = 1.3) +
+      # Color gradient for heatmap
+      scale_fill_gradient2(
+        low = "black",
+        mid = "darkorange4",
+        high = "darkorange",
+        midpoint = scale_midpoint,
+        name = scale_label
+      ) +
+      # Custom colors for target vs normal
+      scale_color_manual(values = c("other" = "darkgrey", "target" = "red3")) +  # Highlight sample in red, others in gray
+      # Labels
+      scale_y_continuous(breaks = merged_data$y, labels = merged_data$Row) +
+      scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
+      xlab("Column") +
+      ylab("Row") +
+      ggtitle("Reads per Reaction Heatmap") +
+      # Theme adjustments
+      theme_minimal() +
+      theme(
+        axis.text = element_text(size = 12),
+        strip.text = element_text(size = 14, face = "bold"),
+        panel.grid = element_blank(),
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        legend.key = element_rect(colour = "black")  # Ensure visible legend border
+      ) + 
+      coord_fixed(ratio = 0.75)
+    
+    print(plate_layout)
+}
+```
+
+```{r}
+plot_plate_with_feature("Negative-Control-2", allele_data, quadrants, sample_colours, "log10(common_reads+0.1)", 2, "log10(common_reads)")
 ```
 
 ## Successul Amplification
@@ -676,103 +829,17 @@ head(reprep_repool_summary) |>
 write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
 ```
 
-## Plate Maps
-
-```{r}
-create_plate_template <- function(summary_samples, batches, nrows=8, ncols=12) {
-    quadrants <-
-      expand.grid(
-        Batch = batches,
-        y = 1:nrows,
-        Column = 1:ncols
-      ) %>%
-      mutate(
-        ymin = y - 0.45,
-        ymax = y + 0.45,
-        xmin = Column - 0.45,
-        xmax = Column + 0.45
-      ) %>%
-      mutate(Row = toupper(rev(letters[1:nrows])[y])) %>%
-      # Join on the sample information to the plate
-      left_join(
-        summary_samples %>%
-          select(Batch, Column, Row, SampleType) %>%
-          distinct(),
-        by = c("Batch", "Column", "Row" = "Row")
-      )
-    return(quadrants)
-}
-```
-
-```{r}
-quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch))
-```
-
-### Plate Layout
-
-The plate layout provides a visual representation of sample organization, including the placement of positive and negative controls. This is allows verification that controls are positioned correctly to validate assay performance with later plots.
-
-```{r}
-plot_plate_layout <- function(quadrants, sample_colours) {
-    # Ensure that NAs in SampleType are replaced with "NA" string (or another label)
-    quadrants$SampleType[is.na(quadrants$SampleType)] <- "empty"
-    plate_layout <- ggplot(quadrants) +
-      # Tiles representing sample types, fill based on SampleType
-      geom_tile(aes(x = Column, y = y, fill = SampleType), color = "white") +
-      # Facet by Batch
-      facet_wrap(vars(Batch), ncol = 1) +
-      scale_y_continuous(breaks = quadrants$y, labels = quadrants$Row) +
-      # Make sure labels are correct
-      xlab("Column") +
-      ylab("Row") +
-      # Customizing the x-axis
-      scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
-      # Quadrants as rectangles with borders
-      geom_rect(
-        data = quadrants,
-        aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-        color = "black", fill = NA, linewidth = 1
-      ) +
-      # Custom fill colors for each SampleType
-      scale_fill_manual(
-        values = sample_colours
-      ) +
-      # Theming
-      theme_minimal() +
-      theme(
-        axis.text = element_text(size = 12),  
-        strip.text = element_text(size = 14, face = "bold"), 
-        panel.grid = element_blank(),  
-        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-      ) +
-    # Customizing the legend to add an outline for the colored squares
-    guides(
-      fill = guide_legend(
-        override.aes = list(
-          color = "black",  # Outline color for the squares
-          size = 1          # Outline size for the squares
-        )
-      )
-    ) +
-    # Title for the plot
-    ggtitle("Sample Types and Quadrants Distribution by Batch")+
-    coord_fixed(ratio = 0.75)
-    print(plate_layout)
-}
-```
-
-```{r}
-plot_plate_layout(quadrants, sample_colours)
-```
+## Amplification Plate Maps
 
 ### Reads Heatmap
 
 The reads heatmap provides a visual representation of read distribution across the plate, helping to identify inconsistencies in sequencing efficiency. This can highlight potential issues such as edge effects, batch effects, or pipetting errors that may impact data quality and interpretation.
 
 ```{r}
-plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, fill_param, scale_midpoint) {
+plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
     # Merge summary_samples with quadrants to include reads_per_reaction
-    merged_data <- merge(summary_samples, quadrants, by = c("Batch", "Row", "Column", "SampleType"), all.x = TRUE)
+    quadrants <- crossing(summary_samples %>% select(reaction) %>% distinct() , quadrants)
+    merged_data <- merge(summary_samples, quadrants, by = c("Batch", "Row", "Column", "SampleType", "reaction"), all.y = TRUE)
     
     # Ensure NAs in SampleType are labeled
     merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
@@ -792,7 +859,7 @@ plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, 
         mid = "darkorange4",
         high = "darkorange",
         midpoint = scale_midpoint,
-        name = "log10(reads)"
+        name = scale_label
       ) +
       # Outline colors based on SampleType
       scale_color_manual(values = sample_colours, na.translate = TRUE) +
@@ -817,17 +884,17 @@ plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, 
 ```
 
 ```{r}
-plot_plate_with_feature(summary_samples, quadrants, sample_colours, "log10(reads_per_reaction + 0.1)", 2)
+plot_plate_with_feature(summary_samples, quadrants, sample_colours, "log10(reads_per_reaction + 0.1)", 2, "log10(reads_per_reaction)")
 ```
 
 ### Successful Amplification Heatmap
 Here we visualise the success rate of amplification across the plate, allowing for the identification of poorly amplified regions or wells. This is useful for assessing the quality of the PCR process, ensuring that loci across all samples are adequately amplified, and helping to spot potential issues with specific wells or sample groups.
 
 ```{r}
-plot_plate_with_feature(summary_samples, quadrants, sample_colours, "prop_good_loci", 0.5)
+plot_plate_with_feature(summary_samples, quadrants, sample_colours, "prop_good_loci", 0.5, "prop_good_loci")
 ```
 
-# Save filtered allele table
+## Save filtered allele table
 
 ```{r}
 # Read in raw data with no other filtering applied 
