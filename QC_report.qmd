@@ -10,7 +10,6 @@ execute:
   echo: false
 ---
 
-
 This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
 
 ## Required Inputs 
@@ -54,6 +53,11 @@ Note: A locus is considered successfully amplified if it has more than `read_thr
 ## Setup
 
 ```{r}
+# Running mode - if running interactively, for example in Rstudio, set this to FALSE
+render_mode <- TRUE
+```
+
+```{r}
 # User input 
 # Input path to results directory from Mad4hatter pipeline
 results_dir <- "PATH/TO/MAD4HATTER_RESULTS_DIR/"
@@ -67,8 +71,8 @@ filtered_allele_data_path <- "allele_data_filtered.txt"
 ```
 
 ```{r}
-results_dir <- "data/Jessica_results_example"
-manifest_file <- "data/Jessica_manifest.csv"
+results_dir <- "data/Jessica_results_example_nextseq/"
+manifest_file <- "data/Jessica_manifest_nextseq.csv"
 ```
 
 ```{r}
@@ -117,6 +121,7 @@ library(tidyr)
 library(ggbeeswarm)
 library(stringr)
 library(tibble)
+library(purrr)
 library(kableExtra, quietly = TRUE, warn.conflicts = FALSE)
 ```
 
@@ -298,6 +303,18 @@ cat(length(unique(amplicon_coverage$SampleID)), "samples in manifest and amplico
 The plate layout provides a visual representation of sample organization, including the placement of positive and negative controls. This is allows verification that controls are positioned correctly to validate assay performance with later plots.
 
 ```{r}
+create_tabsetOfGgplotObjects <- function(ggplotObjectsList) {
+  cat("\n\n::: {.panel-tabset}\n\n")
+  iwalk(ggplotObjectsList, ~ {
+    cat('## ', .y, '\n\n')
+    print(.x)
+    cat('\n\n')
+  })
+  cat(":::\n")
+}
+```
+
+```{r}
 create_plate_template <- function(summary_samples, batches, nrows=8, ncols=12) {
     quadrants <-
       expand.grid(
@@ -328,56 +345,73 @@ quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch
 ```
 
 ```{r}
-plot_plate_layout <- function(quadrants, sample_colours) {
-    # Ensure that NAs in SampleType are replaced with "NA" string (or another label)
-    quadrants$SampleType[is.na(quadrants$SampleType)] <- "empty"
-    plate_layout <- ggplot(quadrants) +
-      # Tiles representing sample types, fill based on SampleType
-      geom_tile(aes(x = Column, y = y, fill = SampleType), color = "white") +
-      # Facet by Batch
-      facet_wrap(vars(Batch), ncol = 1) +
-      scale_y_continuous(breaks = quadrants$y, labels = quadrants$Row) +
-      # Make sure labels are correct
-      xlab("Column") +
-      ylab("Row") +
-      # Customizing the x-axis
-      scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
-      # Quadrants as rectangles with borders
-      geom_rect(
-        data = quadrants,
-        aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-        color = "black", fill = NA, linewidth = 1
-      ) +
-      # Custom fill colors for each SampleType
-      scale_fill_manual(
-        values = sample_colours
-      ) +
-      # Theming
-      theme_minimal() +
-      theme(
-        axis.text = element_text(size = 12),  
-        strip.text = element_text(size = 14, face = "bold"), 
-        panel.grid = element_blank(),  
-        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-      ) +
-    # Customizing the legend to add an outline for the colored squares
-    guides(
-      fill = guide_legend(
-        override.aes = list(
-          color = "black",  # Outline color for the squares
-          size = 1          # Outline size for the squares
-        )
-      )
-    ) +
-    # Title for the plot
-    ggtitle("Sample Types and Quadrants Distribution by Batch")+
-    coord_fixed(ratio = 0.75)
-    print(plate_layout)
+plot_plate <- function(quadrants_batch, sample_colours, batch_name) {
+    plate_layout <- ggplot(quadrants_batch) +
+          # Tiles representing sample types, fill based on SampleType
+          geom_tile(aes(x = Column, y = y, fill = SampleType), color = "white") +
+          scale_y_continuous(breaks = quadrants_batch$y, labels = quadrants_batch$Row) +
+          # Make sure labels are correct
+          xlab("Column") +
+          ylab("Row") +
+          # Customizing the x-axis
+          scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
+          # Quadrants as rectangles with borders
+          geom_rect(
+            data = quadrants_batch,
+            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            color = "black", fill = NA, linewidth = 1
+          ) +
+          # Custom fill colors for each SampleType
+          scale_fill_manual(
+            values = sample_colours
+          ) +
+          # Theming
+          theme_minimal() +
+          theme(
+            axis.text = element_text(size = 12),  
+            strip.text = element_text(size = 14, face = "bold"), 
+            panel.grid = element_blank(),  
+            plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+          ) +
+        # Customizing the legend to add an outline for the colored squares
+        guides(
+          fill = guide_legend(
+            override.aes = list(
+              color = "black",  # Outline color for the squares
+              size = 1          # Outline size for the squares
+            )
+          )
+        ) +
+        # Title for the plot
+        ggtitle(paste0("Plate Map: ", batch_name)) +
+        coord_fixed(ratio = 0.75)
+    return(plate_layout)
+}
+
+plot_plate_layouts <- function(plate_data, sample_colours) {
+    plate_maps = list()
+    plate_data$SampleType[is.na(plate_data$SampleType)] <- "empty"
+    for(b in unique(plate_data$Batch)){
+      quadrants_batch = plate_data %>%
+        filter(Batch == b)# %>%
+      plate_maps[[b]] = plot_plate(quadrants_batch, sample_colours, b)
+    }
+    return(plate_maps)
 }
 ```
 
 ```{r}
-plot_plate_layout(quadrants, sample_colours)
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_layouts(quadrants, sample_colours)
+if (render_mode) {
+  cat(create_tabsetOfGgplotObjects(plate_maps))
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
 ```
 
 ## Primer Dimer Content
@@ -843,20 +877,12 @@ write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
 The reads heatmap provides a visual representation of read distribution across the plate, helping to identify inconsistencies in sequencing efficiency. This can highlight potential issues such as edge effects, batch effects, or pipetting errors that may impact data quality and interpretation.
 
 ```{r}
-plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
-    # Merge summary_samples with quadrants to include reads_per_reaction
-    quadrants <- crossing(summary_samples %>% select(reaction) %>% distinct() , quadrants)
-    merged_data <- merge(summary_samples, quadrants, by = c("Batch", "Row", "Column", "SampleType", "reaction"), all.y = TRUE)
-    
-    # Ensure NAs in SampleType are labeled
-    merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
-    
-    # Create the heatmap plot
-    plate_layout <- ggplot(merged_data) +
+plot_plate_with_feature <- function(quadrants_batch, sample_colours, batch_name, fill_param, scale_midpoint, scale_label) {
+    plate_layout <- ggplot(quadrants_batch) +
       # Heatmap fill based on reads_per_reaction
       geom_tile(aes(x = Column, y = y, fill = !!rlang::parse_expr(fill_param)), color = NA, width = 0.95, height = 0.95) +
       # Separate tile layer for outlines
-      geom_rect(data = merged_data,
+      geom_rect(data = quadrants_batch,
             aes(xmin = Column-0.45, xmax = Column+0.45, ymin = y-0.45, ymax = y+0.45,color=SampleType),fill = NA,linewidth=1.3)+
       # Facet by Batch and reaction
       facet_grid(reaction ~ Batch) +
@@ -871,11 +897,10 @@ plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, 
       # Outline colors based on SampleType
       scale_color_manual(values = sample_colours, na.translate = TRUE) +
       # Labels
-      scale_y_continuous(breaks = merged_data$y, labels = merged_data$Row) +
+      scale_y_continuous(breaks = quadrants_batch$y, labels = quadrants_batch$Row) +
       scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
       xlab("Column") +
       ylab("Row") +
-      ggtitle("Reads per Reaction Heatmap") +
       # Theme adjustments
       theme_minimal() +
       theme(
@@ -886,19 +911,56 @@ plot_plate_with_feature <- function(summary_samples, quadrants, sample_colours, 
         legend.key = element_rect(colour = "black")  # Ensure visible legend border
       ) + 
     coord_fixed(ratio = 0.75)
-    print(plate_layout)
+    return(plate_layout)
+}
+
+plot_plate_heat_maps <- function(sample_data, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
+    plate_maps = list()
+    
+    quadrants_by_reaction <- crossing(summary_samples %>% select(reaction) %>% distinct() , quadrants)
+    merged_data <- merge(summary_samples, quadrants_by_reaction, by = c("Batch", "Row", "Column", "SampleType", "reaction"), all.y = TRUE)
+    
+    # Ensure NAs in SampleType are labeled
+    merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
+    
+    for(b in unique(merged_data$Batch)){
+      merged_data_batch = merged_data %>%
+        filter(Batch == b)
+      plate_maps[[b]] = plot_plate_with_feature(merged_data_batch, sample_colours, b, fill_param, scale_midpoint, scale_label)
+    }
+    return(plate_maps)
 }
 ```
 
 ```{r}
-plot_plate_with_feature(summary_samples, quadrants, sample_colours, "log10(reads_per_reaction + 0.1)", 2, "log10(reads_per_reaction)")
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_heat_maps(summary_samples, quadrants, sample_colours, "log10(reads_per_reaction + 0.1)", 2, "log10(reads_per_reaction)")
+if (render_mode) {
+  cat(create_tabsetOfGgplotObjects(plate_maps))
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
 ```
 
 ### Successful Amplification Heatmap
 Here we visualise the success rate of amplification across the plate, allowing for the identification of poorly amplified regions or wells. This is useful for assessing the quality of the PCR process, ensuring that loci across all samples are adequately amplified, and helping to spot potential issues with specific wells or sample groups.
 
 ```{r}
-plot_plate_with_feature(summary_samples, quadrants, sample_colours, "prop_good_loci", 0.5, "prop_good_loci")
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_heat_maps(summary_samples, quadrants, sample_colours, "prop_good_loci", 0.5, "prop_good_loci")
+if (render_mode) {
+  cat(create_tabsetOfGgplotObjects(plate_maps))
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
 ```
 
 ## Save filtered allele table
@@ -923,5 +985,6 @@ allele_data_filtered <- allele_data %>%
 # Write out table 
 write.csv(allele_data_filtered, filtered_allele_data_path, row.names = FALSE)
 ```
+
 
 
