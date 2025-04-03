@@ -71,11 +71,6 @@ filtered_allele_data_path <- "allele_data_filtered.txt"
 ```
 
 ```{r}
-results_dir <- "data/Jessica_results_example_nextseq/"
-manifest_file <- "data/Jessica_manifest_nextseq.csv"
-```
-
-```{r}
 # If TRUE, trims extra sequencing-related information from SampleID to match the manifest format
 standardise_sampleID <- TRUE
 # Input a threshold for the reads needed to classify a locus as having amplified successfully
