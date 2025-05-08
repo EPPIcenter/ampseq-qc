@@ -10,6 +10,7 @@ execute:
   echo: false
 ---
 
+
 This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
 
 ## Required Inputs 
@@ -639,85 +640,14 @@ p <- ggplot(summary_data, aes(x = Locus, y = sum_reads, fill = reaction, text = 
 ggplotly(p, tooltip = "text")
 ```
 
-#### Negative Control Contamination Maps
-
-```{r}
-plot_plate_with_feature <- function(target, allele_data, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
-
-    target_data <- allele_data %>% filter(SampleID == target)
-    comparison <- target_data %>% 
-        inner_join(allele_data, by = c("Locus","PseudoCIGAR"), suffix = c("_target", "")) %>%
-        group_by(SampleID_target, SampleID, PseudoCIGAR) %>%
-        summarise(
-            common_count = n(),  # Count the number of times the PseudoCIGAR is shared
-            common_reads = sum(Reads_target + Reads, na.rm = TRUE),  # Sum the reads of both samples
-            .groups = "drop"
-        )
-    comparison_plate <- comparison %>%
-      inner_join(manifest, by = "SampleID")
-    
-    # Merge comparison_plate with quadrants to include reads_per_reaction
-    merged_data <- merge(comparison_plate, quadrants, by = c("Batch", "Row", "Column", "SampleType"), all.y = TRUE)
-    
-    # Ensure NAs in SampleType are labeled
-    merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
-    
-    # Create a new column to identify the target sample
-    merged_data$target <- ifelse(merged_data$SampleID == target, "target", "other")
-
-    # Create the heatmap plot
-    plate_layout <- ggplot(merged_data) +
-      # Heatmap fill based on reads_per_reaction
-      geom_tile(aes(x = Column, y = y, fill = !!rlang::parse_expr(fill_param)), color = NA, width = 0.95, height = 0.95) +
-      # Separate tile layer for outlines
-      geom_rect(data = merged_data,
-                aes(xmin = Column-0.45, xmax = Column+0.45, ymin = y-0.45, ymax = y+0.45, color = target), 
-                fill = NA, linewidth = 1.3) +
-      # Color gradient for heatmap
-      scale_fill_gradient2(
-        low = "black",
-        mid = "darkorange4",
-        high = "darkorange",
-        midpoint = scale_midpoint,
-        name = scale_label
-      ) +
-      # Custom colors for target vs normal
-      scale_color_manual(values = c("other" = "darkgrey", "target" = "red3")) +  # Highlight sample in red, others in gray
-      # Labels
-      scale_y_continuous(breaks = merged_data$y, labels = merged_data$Row) +
-      scale_x_continuous(breaks = 1:12, labels = as.character(1:12)) +
-      xlab("Column") +
-      ylab("Row") +
-      ggtitle("Reads for PseudoCIGARs in common") +
-      # Theme adjustments
-      theme_minimal() +
-      theme(
-        axis.text = element_text(size = 12),
-        strip.text = element_text(size = 14, face = "bold"),
-        panel.grid = element_blank(),
-        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-        legend.key = element_rect(colour = "black")  # Ensure visible legend border
-      ) + 
-      coord_fixed(ratio = 0.75)
-    
-    print(plate_layout)
-}
-```
-
-```{r}
-# Input the 
-negative_control_name <- "Negative-Control-4"
-plot_plate_with_feature(negative_control_name, allele_data, quadrants, sample_colours, "log10(common_reads+0.1)", 2, "log10(common_reads)")
-```
-
 ## Successul Amplification
 
 ### Parasitemia vs. Number of Successfully Amplified Loci
 This plot examines the relationship between a sample's parasitemia (qPCR-determined parasite load) and the number of loci that successfully amplified. This plot helps assess whether lower parasitemia samples struggle with amplification, which can indicate potential limitations in sensitivity.
 
 ```{r}
-generate_parasitemia_by_amplification_success_plot <- function(summary_samples, threshold, sample_colours) {
-    parasitemia_plot <- ggplot(data = summary_samples) +
+generate_parasitemia_by_amplification_success_plot <- function(summary_samples_for_batch, threshold, sample_colours, batch_name) {
+    parasitemia_plot <- ggplot(data = summary_samples_for_batch) +
       # Plot points with different colors for each sample type
       geom_point(aes(x = Parasitemia + 0.9, 
                      y = prop_good_loci, 
@@ -729,22 +659,41 @@ generate_parasitemia_by_amplification_success_plot <- function(summary_samples, 
     scale_x_log10() +
     ylim(0,1) + 
     # Faceting by Batch column
-    facet_grid(cols = vars(Batch),rows = vars(reaction),
+    facet_grid(rows = vars(reaction),
                scale = "free_y")+
     # Adding labels and title
     ylab(paste0("Amplicons with >",threshold," reads")) +
     xlab("Parasitemia (log10)") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))+
 
-    ggtitle("Amplicons with `good` read depth")+
+    ggtitle(paste0(batch_name, " Amplicons with `good` read depth"))+
     # Color scale for SampleType
     scale_color_manual(values = sample_colours) 
-    print(parasitemia_plot)
+}
+
+generate_parasitemia_by_amplification_success_plots <- function(summary_samples, threshold, sample_colours) {
+    plots = list()
+    for(b in unique(summary_samples$Batch)){
+      summary_samples_batch = summary_samples %>%
+        filter(Batch == b)# %>%
+      plots[[b]] = generate_parasitemia_by_amplification_success_plot(summary_samples_batch, read_threshold, sample_colours, b)
+    }
+    return(plots)
 }
 ```
 
 ```{r}
-generate_parasitemia_by_amplification_success_plot(summary_samples, read_threshold, sample_colours)
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plots <- generate_parasitemia_by_amplification_success_plots(summary_samples, read_threshold, sample_colours)
+if (render_mode) {
+  cat(create_tabsetOfGgplotObjects(plots))
+} else {
+  for (plot in plots) {
+    print(plot)
+  }
+}
 ```
 
 ### Sample Reads vs. Number of Successfully Amplified Loci
@@ -752,10 +701,10 @@ generate_parasitemia_by_amplification_success_plot(summary_samples, read_thresho
 This illustrates the relationship between the total number of reads per sample and the number of loci that passed the amplification threshold for that sample. This plot helps evaluate whether samples with higher read counts achieve better amplification success and can reveal potential issues such as insufficient sequencing depth or inefficient amplification. Ideally, a positive correlation should be observed, where higher read counts result in more successfully amplified loci.
 
 ```{r}
-generate_reads_by_amplification_success_plot <- function(summary_samples, amplification_threshold, 
-                                                         sample_colours, reprep_threshold, repool_threshold) {
+generate_reads_by_amplification_success_plot <- function(summary_samples_for_batch, amplification_threshold, 
+                                                         sample_colours, reprep_threshold, repool_threshold, batch_name) {
     
-    amp_plot <- ggplot(data = summary_samples) +
+    amp_plot <- ggplot(data = summary_samples_for_batch) +
       # Plot points with different colors for each sample type
       geom_point(aes(x = reads_per_sample + 0.9,  
                      y=prop_good_loci,
@@ -768,30 +717,49 @@ generate_reads_by_amplification_success_plot <- function(summary_samples, amplif
     # Fix y-axis scale from 0 to 1
     scale_y_continuous(limits = c(0, 1)) +
     # Faceting by Batch column
-    facet_grid(cols = vars(Batch),rows = vars(reaction),
+    facet_grid(rows = vars(reaction),
                scale = "free_y")+
     # Adding labels and title
     ylab(paste0("Amplicons with >",amplification_threshold," reads")) +
     xlab("Total Reads for Sample") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))+
 
-    ggtitle("Targets that Amplified Successfully")+
+    ggtitle(paste0(batch_name, " Targets that Amplified Successfully"))+
     # Color scale for SampleType
     scale_color_manual(values = sample_colours) +
     # Add dashed horizontal lines at reprep_threshold and repool_threshold
     geom_hline(yintercept = reprep_threshold, linetype = "dashed") +
     geom_hline(yintercept = repool_threshold, linetype = "dashed") +
     # Add labels for the horizontal lines
-    annotate("text", x = min(summary_samples$reads_per_sample, na.rm = TRUE), 
+    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE), 
                y = reprep_threshold, label = "Reprep", vjust = 1, hjust = 0) +
-    annotate("text", x = min(summary_samples$reads_per_sample, na.rm = TRUE), 
+    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE), 
                y = repool_threshold, label = "Repool", vjust = 1, hjust = 0) 
-    print(amp_plot)
+}
+
+generate_reads_by_amplification_success_plots <- function(summary_samples, read_threshold, sample_colours, reprep_threshold, repool_threshold) {
+    plots = list()
+    for(b in unique(summary_samples$Batch)){
+      summary_samples_batch = summary_samples %>%
+        filter(Batch == b)
+      plots[[b]] = generate_reads_by_amplification_success_plot(summary_samples_batch, read_threshold, sample_colours, reprep_threshold, repool_threshold, b)
+    }
+    return(plots)
 }
 ```
 
 ```{r}
-generate_reads_by_amplification_success_plot(summary_samples, read_threshold, sample_colours,  reprep_threshold, repool_threshold)
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+read_plots <- generate_reads_by_amplification_success_plots(summary_samples, read_threshold, sample_colours, reprep_threshold, repool_threshold)
+if (render_mode) {
+  cat(create_tabsetOfGgplotObjects(plots))
+} else {
+  for (plot in read_plots) {
+    print(plot)
+  }
+}
 ```
 
 ```{r}
