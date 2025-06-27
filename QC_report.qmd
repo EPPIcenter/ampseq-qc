@@ -1,15 +1,14 @@
 ---
 title: "QC Report"
 author: ""
-output: 
-  html_document:
+format: 
+  html:
     code-fold: true
-    strip-comments: true
     toc: true
+    self-contained: true
 execute: 
   echo: false
 ---
-
 
 This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
 
