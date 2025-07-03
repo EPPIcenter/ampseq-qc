@@ -1,0 +1,45 @@
+Package: ampseq.qc
+Title: QC Summary Shiny App
+Version: 0.1.0
+Authors@R: 
+    c(
+        person(
+            given = "Kathryn",
+            family = "Murie",
+            role = c("aut", "cre"),
+            email = "kathryn.murie@ucsf.edu"),
+        person(
+            given = "Maxwell",
+            family = "Murphy",
+            role = c("aut", "ctb"),
+            email = "maxwell.murphy@ucsf.edu"
+        )
+    )
+Description: A Shiny app for visualizing QC summary data from ampseq data.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports: 
+    shiny,
+    shinyFiles,
+    ggplot2,
+    dplyr,
+    tidyr,
+    ggbeeswarm,
+    stringr,
+    plotly,
+    kableExtra,
+    golem,
+    shinyjs,
+    tools,
+    shinyBS,
+    tibble,
+    writexl,
+    DT,
+    zip,
+    readr
+Suggests: 
+    testthat (>= 3.0.0),
+    covr
+Config/testthat/edition: 3
