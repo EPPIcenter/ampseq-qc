@@ -63,13 +63,13 @@ render_mode <- TRUE
 results_dir <- "PATH/TO/MAD4HATTER_RESULTS_DIR/"
 # Input path to manifest 
 manifest_file <- "PATH/TO/MANIFEST"
-# Path to outputs
-reprep_repool_summary_path <- "reprep_repool_summary.csv"
-polyclonal_information_path <- "positive_control_polyclonal_info.csv"
-neg_control_information_path <- "negative_control_amplified_loci.csv"
-filtered_allele_data_path <- "allele_data_filtered.txt"
-filtered_resmarker_table_path <- "resistance_marker_module/resmarker_table_filtered.txt"
-filtered_resmarker_microhap_table_path <- "resistance_marker_module/resmarker_microhap_table_filtered.txt"
+# Path to outputs (default to results directory)
+reprep_repool_summary_path <- file.path(results_dir,"reprep_repool_summary.csv")
+polyclonal_information_path <- file.path(results_dir,"positive_control_polyclonal_info.csv")
+neg_control_information_path <- file.path(results_dir,"negative_control_amplified_loci.csv")
+filtered_allele_data_path <- file.path(results_dir,"allele_data_filtered.txt")
+filtered_resmarker_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_table_filtered.txt")
+filtered_resmarker_microhaplotype_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_microhaplotype_table_filtered.txt")
 ```
 
 ```{r}
@@ -108,6 +108,9 @@ cat("Minimum Allele Frequency per ASV (Positive Control Filter):", af_filter, "\
 sample_coverage_file <- file.path(results_dir,"sample_coverage.txt")
 amplicon_coverage_file <- file.path(results_dir,"amplicon_coverage.txt")
 allele_data_path <- file.path(results_dir, "allele_data.txt")
+resmarker_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_table.txt")
+resmarker_microhaplotype_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_microhaplotype_table.txt")
+
 ```
 
 ```{r}
@@ -556,6 +559,9 @@ print("List of multiallelic loci (first few entries)")
 head(polyclonal_information) |>
   kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+cat("The following file was created\n")
+cat(polyclonal_information_path)
 ```
 
 ### Negative Control Contamination 
@@ -601,6 +607,9 @@ write.csv(neg_control_information, neg_control_information_path, row.names = FAL
 head(neg_control_information_path) |>
   kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+cat("The following file was created\n")
+cat(neg_control_information_path)
 ```
 
 #### Aggregated Reads per Amplicon
@@ -842,6 +851,9 @@ head(reprep_repool_summary) |>
 
 ```{r}
 write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
+
+cat("The following file was created\n")
+cat(reprep_repool_summary_path)
 ```
 
 ## Amplification Plate Maps
@@ -981,8 +993,6 @@ write.csv(resmarker_table_filtered, filtered_resmarker_table_path, row.names = F
 # Read in resmarker_microhaplotype raw data with no other filtering applied
 resmarker_microhaplotype_table <- read.csv(resmarker_microhaplotype_table_path, sep='\t')
 
-# Read in resmarker_microhaplotype raw data with no other filtering applied
-resmarker_microhaplotype_table <- read.csv(resmarker_microhaplotype_table_path, sep='\t')
 
 # Calculate allele frequency
 group_cols <- c("SampleID", "GeneID", "Gene", "Locus", "MicrohaplotypeCodonIDs", "RefMicrohap")
@@ -1000,7 +1010,12 @@ resmarker_microhaplotype_table_filtered <- resmarker_microhaplotype_table %>%
   ungroup()
 
 # Write out table
-write.csv(resmarker_table_filtered, filtered_resmarker_microhaplotype_table_path, row.names = FALSE)
+write.csv(resmarker_microhaplotype_table_filtered, filtered_resmarker_microhaplotype_table_path, row.names = FALSE)
+
+cat("The following files were created\n")
+cat(filtered_allele_data_path)
+cat(filtered_resmarker_table_path)
+cat(filtered_resmarker_microhaplotype_table_path)
 ```
 
 
