@@ -10,7 +10,7 @@ execute:
   echo: false
 ---
 
-This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
+This interactive notebook generates a summary of QC statistics to assess the success of a **MAD4HatTeR** run. 
 
 ## Required Inputs 
 
@@ -68,10 +68,13 @@ reprep_repool_summary_path <- "reprep_repool_summary.csv"
 polyclonal_information_path <- "positive_control_polyclonal_info.csv"
 neg_control_information_path <- "negative_control_amplified_loci.csv"
 filtered_allele_data_path <- "allele_data_filtered.txt"
+filtered_resmarker_table_path <- "resistance_marker_module/resmarker_table_filtered.txt"
+filtered_resmarker_microhap_table_path <- "resistance_marker_module/resmarker_microhap_table_filtered.txt"
 ```
 
 ```{r}
 # If TRUE, trims extra sequencing-related information from SampleID to match the manifest format
+# (if your manifest sample names match the FASTQ file names, including _SX_L001, for example, set to FALSE)
 standardise_sampleID <- TRUE
 # Input a threshold for the reads needed to classify a locus as having amplified successfully
 read_threshold <- 100
@@ -121,7 +124,12 @@ library(kableExtra, quietly = TRUE, warn.conflicts = FALSE)
 ```
 
 ```{r}
-manifest <- read.csv(manifest_file) %>% mutate(Row = toupper(Row)) # Ensure Row is capitalised
+sep_guess <- if (any(grepl(";", readLines(allele_data_path, n = 1)))) ";" else "," # necessary for non-English format
+manifest <- read.csv(manifest_file, sep = sep_guess) %>%
+  mutate(Row = toupper(Row)) %>%
+  mutate(Parasitemia = as.numeric(Parasitemia))
+manifest <- read.csv(manifest_file, sep = sep_guess) %>% 
+  mutate(Row = toupper(Row)) # Ensure Row is capitalised
 sample_coverage <- read.csv(sample_coverage_file, sep="\t")
 allele_data <- read.csv(allele_data_path, sep='\t')
 ```
@@ -472,9 +480,9 @@ generate_balancing_plot(summary_samples, sample_colours)
 
 ## Control Summary
 
-### Polyclonality of Positive Controls
+### Multiallelic Loci in Positive Controls
 
-Here we inspect the positive controls, ensuring that the positive controls perform as expected without contamination or unwanted diversity. For example, if the control you included was monoclonal you would expect little to no loci reported as having more than one allele (polyclonal). In some cases you may allow for some level of false positive detection within a monoclonal control, these filters 
+Here we inspect the positive controls, ensuring that the positive controls perform as expected without contamination or unwanted diversity. For example, if the control you included was monoclonal you would expect little to no loci reported as having more than one allele (multiallelic). In some cases you may allow for some level of false positive detection within a monoclonal control. Note that WSAF and total reads per allele filters (as set by default or modified by user) are applied.
 
 ```{r}
 # Add on within sample allele freqeucny 
@@ -500,7 +508,6 @@ if (allele_col=="PseudoCIGAR") {
 ```
 
 ```{r}
-# Load required libraries
 # Apply filters and identify the number of alleles being called per locus
 locus_summary <- pos_control_data %>%
   group_by(SampleID, Locus) %>%
@@ -510,7 +517,7 @@ locus_summary <- pos_control_data %>%
   ) %>%
   mutate(
     Category = case_when(
-      NumASVs_Meeting_Threshold == 1 ~ "Monoclonal",
+      NumASVs_Meeting_Threshold == 1 ~ "Monoallelic",
       NumASVs_Meeting_Threshold == 2 ~ "2 Alleles",
       NumASVs_Meeting_Threshold > 2  ~ ">2 Alleles"
     )
@@ -524,9 +531,9 @@ result <- locus_summary %>%
 # Create ggplot
 p <- ggplot(result, aes(x = SampleID, y = Count, fill = Category, text = paste("Count:", Count))) +
   geom_bar(stat = "identity", position = "stack") +
-  labs(title = "Clonality of Loci for Positive Controls", x = "Sample ID", y = "Number of Loci") +
+  labs(title = "Alleles per Locus for Positive Controls", x = "Sample ID", y = "Number of Loci") +
   theme_minimal() +
-  scale_fill_manual(values = c("Monoclonal" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "turquoise3")) + 
+  scale_fill_manual(values = c("Monoallelic" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "turquoise3")) + 
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -545,6 +552,7 @@ polyclonal_information <- pos_control_data %>%
 write.csv(polyclonal_information, polyclonal_information_path, row.names = FALSE)
 
 # Display as styled table
+print("List of multiallelic loci (first few entries)")
 head(polyclonal_information) |>
   kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -553,7 +561,7 @@ head(polyclonal_information) |>
 ### Negative Control Contamination 
 
 #### Read Summary per Negative Control
-In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged.
+In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged. No filters are applied to these visualizations.
 
 ```{r}
 # retrieve negative controls from amplicons.full
@@ -578,7 +586,11 @@ ggplot(amplicons_negative) +
   )) +
   xlab("Reads") +
   ylab("Count") + 
-  scale_fill_manual(values = reaction_colours)
+  scale_fill_manual(values = reaction_colours) + 
+  geom_vline(aes(xintercept = read_filter, linetype = "Reads per allele filter"), color = "black") +
+  scale_linetype_manual(name = NULL, values = c("Reads per allele filter" = "dashed"))
+
+print(paste("Max. reads in any locus in negative controls:",max(amplicons_negative$OutputPostprocessing)))
 ```
 
 ```{r}
@@ -591,9 +603,9 @@ head(neg_control_information_path) |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
-#### Aggregated Reads per Target
+#### Aggregated Reads per Amplicon
 
-This plot aggregates the total reads for each locus across all negative controls. In negative controls, if there is an unexpected spike in reads for specific loci, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific loci where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
+This plot aggregates the total reads for each amplicon across all negative controls. In negative controls, if there is an unexpected spike in reads for specific loci, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific loci where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
 
 ```{r}
 # Get reads for each locus, label reaction and extract chrom and start from locus name
@@ -925,7 +937,7 @@ if (render_mode) {
 }
 ```
 
-## Save filtered allele table
+## Save filtered allele and resistance marker tables
 
 ```{r}
 # Read in raw data with no other filtering applied 
@@ -946,6 +958,49 @@ allele_data_filtered <- allele_data %>%
   filter(Reads > read_filter & AlleleFreq > af_filter)
 # Write out table 
 write.csv(allele_data_filtered, filtered_allele_data_path, row.names = FALSE)
+
+# Read in resmarker raw data with no other filtering applied
+resmarker_table <- read.csv(resmarker_table_path, sep='\t')
+
+# Calculate allele frequency
+resmarker_table <- resmarker_table %>%
+  group_by(SampleID, GeneID, Gene, CodonID) %>%
+  mutate(WSAF = Reads / sum(Reads)) %>%
+  ungroup()
+
+# Filter to minimum read and within sample allele frequency
+resmarker_table_filtered <- resmarker_table %>%
+  filter(Reads > read_filter & WSAF > af_filter)%>%
+  group_by(SampleID, GeneID, Gene, CodonID) %>%
+  mutate(WSAF = Reads / sum(Reads)) %>%
+  ungroup()
+
+# Write out table
+write.csv(resmarker_table_filtered, filtered_resmarker_table_path, row.names = FALSE)
+
+# Read in resmarker_microhaplotype raw data with no other filtering applied
+resmarker_microhaplotype_table <- read.csv(resmarker_microhaplotype_table_path, sep='\t')
+
+# Read in resmarker_microhaplotype raw data with no other filtering applied
+resmarker_microhaplotype_table <- read.csv(resmarker_microhaplotype_table_path, sep='\t')
+
+# Calculate allele frequency
+group_cols <- c("SampleID", "GeneID", "Gene", "Locus", "MicrohaplotypeCodonIDs", "RefMicrohap")
+
+resmarker_microhaplotype_table <- resmarker_microhaplotype_table %>%
+  group_by(across(all_of(group_cols))) %>%
+  mutate(WSAF = Reads / sum(Reads)) %>%
+  ungroup()
+
+# Filter to minimum read and within sample allele frequency
+resmarker_microhaplotype_table_filtered <- resmarker_microhaplotype_table %>%
+  filter(Reads > read_filter & WSAF > af_filter) %>%
+  group_by(across(all_of(group_cols))) %>%
+  mutate(WSAF = Reads / sum(Reads)) %>%
+  ungroup()
+
+# Write out table
+write.csv(resmarker_table_filtered, filtered_resmarker_microhaplotype_table_path, row.names = FALSE)
 ```
 
 
