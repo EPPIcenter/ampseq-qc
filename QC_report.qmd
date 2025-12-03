@@ -129,9 +129,6 @@ library(kableExtra, quietly = TRUE, warn.conflicts = FALSE)
 ```{r}
 sep_guess <- if (any(grepl(";", readLines(allele_data_path, n = 1)))) ";" else "," # necessary for non-English format
 manifest <- read.csv(manifest_file, sep = sep_guess) %>%
-  mutate(Row = toupper(Row)) %>%
-  mutate(Parasitemia = as.numeric(Parasitemia))
-manifest <- read.csv(manifest_file, sep = sep_guess) %>% 
   mutate(Row = toupper(Row)) # Ensure Row is capitalised
 sample_coverage <- read.csv(sample_coverage_file, sep="\t")
 allele_data <- read.csv(allele_data_path, sep='\t')
