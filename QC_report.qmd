@@ -88,6 +88,8 @@ missing_targets_report_path <- "missing_targets_report.csv"
 samples_to_repool_path <- "samples_to_repool.csv"
 samples_to_reprep_path <- "samples_to_reprep.csv"
 missing_samples_report_path <- "missing_samples_report.csv"
+filtered_resmarker_table_path <- "resmarker_table_filtered.txt"
+filtered_resmarker_microhaplotype_table_path <- "resmarker_microhaplotype_table_filtered.txt"
 ```
 
 ```{r}
@@ -137,6 +139,8 @@ amplicon_coverage_path <- file.path(results_dir,"amplicon_coverage.txt")
 allele_data_path <- file.path(results_dir, "allele_data.txt")
 collapsed_allele_data_path <- file.path(results_dir, "allele_data_collapsed.txt")
 panel_information_path <- file.path(results_dir, "panel_information/amplicon_info.tsv")
+resmarker_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_table.txt")
+resmarker_microhaplotype_table_path <- file.path(results_dir,"resistance_marker_module/resmarker_microhaplotype_table.txt")
 ```
 
 ```{r}
@@ -153,7 +157,10 @@ library(kableExtra, quietly = TRUE, warn.conflicts = FALSE)
 ```
 
 ```{r}
-manifest <- read.csv(manifest_file) %>% mutate(Row = toupper(Row)) # Ensure Row is capitalised
+sep_guess <- if (any(grepl(";", readLines(allele_data_path, n = 1)))) ";" else "," # necessary for non-English format
+manifest <- read.csv(manifest_file, sep = sep_guess) %>%
+  mutate(Row = toupper(Row)) # Ensure Row is capitalised
+
 sample_coverage <- read.csv(sample_coverage_path, sep="\t")
 amplicon_coverage <- read.delim(amplicon_coverage_path)
 allele_data <- read.csv(allele_data_path, sep='\t')
@@ -1246,6 +1253,8 @@ if (output_dir!="") {
     filtered_allele_data_path <- file.path(output_dir, filtered_allele_data_path)
     filtered_collapsed_allele_data_path <- file.path(output_dir, filtered_collapsed_allele_data_path)
     missing_targets_report_path <- file.path(output_dir, missing_targets_report_path)
+    filtered_resmarker_table_path <- file.path(output_dir, filtered_resmarker_table_path)
+    filtered_resmarker_microhaplotype_table_path <- file.path(output_dir,filtered_resmarker_microhaplotype_table_path)
 }
 
 # Create file paths 
@@ -1283,6 +1292,8 @@ cat("Saved:", samples_to_reprep_path, "(", nrow(samples_to_reprep), "samples nee
 # Read in raw data with no other filtering applied
 allele_data_for_output <- read.csv(allele_data_path, sep='\t')
 collapsed_allele_data_for_output <- read.csv(collapsed_allele_data_path, sep='\t')
+resmarker_table <- read.csv(resmarker_table_path, sep='\t')
+resmarker_microhaplotype_table <- read.csv(resmarker_microhaplotype_table_path, sep='\t')
 
 # Standardize SampleID
 allele_data_for_output <- allele_data_for_output %>%
@@ -1320,11 +1331,26 @@ collapsed_allele_data_for_output <- collapsed_allele_data_for_output %>%
   mutate(AlleleFreq = reads / sum(reads)) %>%
   ungroup()
 
+resmarker_table <- resmarker_table %>%
+  group_by(sample_name, gene_id, gene, aa_position) %>%
+  mutate(AlleleFreq = reads / sum(reads)) %>%
+  ungroup()
+
+group_cols <- c("sample_name", "gene_id", "gene", "target_name", "mhap_aa_positions", "ref_mhap")
+resmarker_microhaplotype_table <- resmarker_microhaplotype_table %>%
+  group_by(across(all_of(group_cols))) %>%
+  mutate(AlleleFreq = reads / sum(reads)) %>%
+  ungroup()
+         
 # Filter to minimum read and within sample allele frequency (if enabled)
 if (filter_wsaf_final_allele_table) {
   allele_data_filtered <- allele_data_for_output %>%
     filter(reads > read_filter & AlleleFreq > af_filter)
   collapsed_allele_data_filtered <- collapsed_allele_data_for_output %>%
+    filter(reads > read_filter & AlleleFreq > af_filter)
+  resmarker_table_filtered <- resmarker_table %>%
+    filter(reads > read_filter & AlleleFreq > af_filter)
+  resmarker_microhaplotype_table_filtered <- resmarker_microhaplotype_table %>%
     filter(reads > read_filter & AlleleFreq > af_filter)
   filter_msg <- paste0("Reads > ", read_filter, " AND WSAF > ", af_filter)
 } else {
@@ -1333,14 +1359,22 @@ if (filter_wsaf_final_allele_table) {
     filter(reads > read_filter)
   collapsed_allele_data_filtered <- collapsed_allele_data_for_output %>%
     filter(reads > read_filter)
+  resmarker_table_filtered <- resmarker_table %>%
+    filter(reads > read_filter)
+  resmarker_microhaplotype_table_filtered <- resmarker_microhaplotype_table_filtered %>%
+    filter(reads > read_filter)
   filter_msg <- paste0("Reads > ", read_filter, " (WSAF filter disabled)")
 }
 
 # Write out table
-write.table(allele_data_filtered, filtered_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
+write.table(allele_data_filtered[ , !(names(allele_data_filtered) %in% c("AlleleFreq"))], filtered_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
 cat("Saved:", filtered_allele_data_path, "\n")
-write.table(collapsed_allele_data_filtered, filtered_collapsed_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
+write.table(collapsed_allele_data_filtered[ , !(names(collapsed_allele_data_filtered) %in% c("AlleleFreq"))], filtered_collapsed_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
 cat("Saved:", filtered_collapsed_allele_data_path, "\n")
+write.table(resmarker_table_filtered[ , !(names(resmarker_table_filtered) %in% c("AlleleFreq"))], filtered_resmarker_table_path, sep="\t", row.names = FALSE, quote = FALSE)
+cat("Saved:", filtered_resmarker_table_path, "\n")
+write.table(resmarker_microhaplotype_table_filtered[ , !(names(resmarker_microhaplotype_table_filtered) %in% c("AlleleFreq"))], filtered_resmarker_microhaplotype_table_path, sep="\t", row.names = FALSE, quote = FALSE)
+cat("Saved:", filtered_resmarker_microhaplotype_table_path, "\n")
 cat("  (Includes ALL targets, including those excluded from QC calculations)\n")
 cat("  Filtered by:", filter_msg, "\n")
 ```
