@@ -1,5 +1,5 @@
 ---
-title: "Unified QC Report"
+title: "QC Report"
 author: ""
 output:
   html_document:
@@ -602,7 +602,7 @@ locus_summary <- locus_summary %>%
       NumASVs_Meeting_Threshold > 2  ~ ">2 Alleles"
     )
   )
-fill_colors <- c("Monoallelic" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "turquoise3")
+fill_colors <- c("Monoallelic" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "cyan")
 
 # Count loci per sample for each category
 result <- locus_summary %>%
@@ -1398,9 +1398,9 @@ qc_summary_by_batch <- reprep_repool_summary %>%
 
 # Define colors for QC status
 qc_colors <- c(
-  "pass" = "darkgreen",
-  "repool" = "orange",
-  "reprep" = "red3"
+  "pass" = "Gray",
+  "repool" = "skyblue",
+  "reprep" = "orangered2"
 )
 
 # Create stacked bar plot
@@ -1409,9 +1409,9 @@ qc_plot <- ggplot(qc_summary_by_batch, aes(x = Batch, y = percentage, fill = sta
   geom_text(
     aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")),
     position = position_stack(vjust = 0.5),
-    size = 3.5,
+    size = 5,
     fontface = "bold",
-    color = "white"
+    color = "black"
   ) +
   scale_fill_manual(
     values = qc_colors,
