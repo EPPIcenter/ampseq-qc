@@ -10,55 +10,22 @@ execute:
   echo: false
 ---
 
-This interactive notebook generates a summary of QC statistics to assess the success of a **PfPHAST** or **MADHatTeR (MH)** run.
+
+This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
 
 ::: {.callout-note collapse="true"}
-## Pipeline Mode Configuration
-
-This unified QC report supports both PfPHAST and MADHatTeR (MH) pipelines.
-
-**Set your pipeline mode in the configuration section below.**
-
-### Key Differences Between Modes
-
-| Feature | PfPHAST | MADHatTeR (MH) |
-|---------|---------|----------------|
-| Pool Structure | 60 targets in 2 pools (M1, M2)* | 276 targets in 2 pools (pool 1, pool 2) |
-| Pool Assignment | M1.1 + M1.addon → pool 1, M2.1 → pool 2 | First number after letter: D1/R1.x → pool 1, R2 → pool 2 |
-| Reaction Extraction | From pool file | From locus name (first digit after letter) |
-| Add-on Handling | Optional: M1.addon can be excluded from QC | N/A |
-| Polyclonality | 3 categories (unified) | 3 categories (unified) |
-| WSAF Filtering | Optional via filter_by_wsaf flag | Optional via filter_by_wsaf flag |
-
-*M1.addon loci can be excluded from QC calculations by setting `use_addons = FALSE`
-
-### Unified Locus Exclusion (Both Modes)
-**Common exclusions (both modes):**
-- **5 species loci**: Non-P. falciparum species markers (ending in -1AB)
-- **9 long amplicons**: Amplicons >275bp that tend to underperform (various suffixes)
-
-**Mode-specific exclusions:**
-- **PfPHAST**: M1.addon loci (if `use_addons = FALSE`)
-- **MH**: R1.1-exclusive loci (loci ONLY in R1.1 primer pool, which is not used in practice)
-
-**Important: Excluded loci are filtered only for QC calculations, NOT from the final allele_data output.** This ensures that:
-- QC metrics (reprep/repool, success rates) reflect only relevant loci for the assay configuration
-- Final filtered allele data includes ALL loci (including excluded ones) meeting read/AF thresholds
-- Downstream analyses have access to complete allele information including species markers
-:::
-
-::: {.callout-note collapse="true"}
-## Required Inputs
+## Required Inputs 
 
 To proceed, you must provide the **results directory** from the Mad4hatter pipeline, which should include the following files:
 
 * **sample_coverage.txt**
 * **amplicon_coverage.txt**
 * **allele_data.txt**
+* **panel_information/amplicon_info.tsv**
 
 Additionally, a **sample manifest** is required. This file must contain the following fields:
 
-* **SampleID** – Unique identifier for each sample.
+* **sample_name** – Unique identifier for each sample.
 * **SampleType** – Specifies whether the entry is a **sample**, **positive** control, or **negative** control.
 * **Batch** – Identifies a group of samples processed simultaneously by the same individual.
 * **Column** – The well column where the sample was placed in the plate.
@@ -71,28 +38,29 @@ Additionally, a **sample manifest** is required. This file must contain the foll
 The notebook provides the following analyses:
 
 * **Plate Layout**: Location of samples and controls on the plate
-* **Primer Dimer Content**: Input reads vs. % attributed to primer dimers
+* **Primer Dimer Content**: Input reads vs. % attributed to primer dimers 
 * **Balancing Across Batches**: Swarm plot of reads output by the pipeline by batch
-* **Control Summary**, including:
+* **Control Summary**, including:  
     * Polyclonality of Positive Controls
     * Read Summary for Negative Controls
     * Contamination Maps for Negative Controls
 * **Successul Amplification** summary, including:
-    * Sample Reads vs. Number of Successfully Amplified Loci
-    * Parasitemia vs. Number of Successfully Amplified Loci
+    * Sample Reads vs. Number of Successfully Amplified Targets
+    * Parasitemia vs. Number of Successfully Amplified Targets
 * **Amplification Plate Maps**, including:
     * Reads Heatmap
     * Successful Amplification Heatmap
-
-
-Note: A locus is considered successfully amplified if it has more than `read_threshold` reads, where `read_threshold` is a threshold that can be set below.
+* **QC Summary by Batch**, including:
+    * Proportion of samples for each status of QC (Pass, Repool, or Reprep) 
+      
+Note: A target is considered successfully amplified if it has more than `read_threshold` reads, where `read_threshold` is a threshold that can be set below.
 :::
 
 
 ## Setup
 
 ::: {.callout-note collapse="true"}
-## Configuration and Data Loading
+### Configuration and Data Loading
 
 ```{r}
 # Running mode - if running interactively, for example in Rstudio, set this to FALSE
@@ -100,79 +68,51 @@ render_mode <- TRUE
 ```
 
 ```{r}
-#####################################################
-## USER CONFIGURATION - MODIFY THESE VALUES
-#####################################################
-
-
-# Set working directory (where pool files and output directories are located)
-working_dir <- "~/Documents/PfPHAST_vs_MH_update_QC/"
-setwd(working_dir)
-
-# PIPELINE MODE: Set to "PfPHAST" or "MH" for MADHatTeR
-pipeline_mode <- "PfPHAST"
-
-# ADD-ON USAGE (PfPHAST only): Set to TRUE if M1.addon loci were used, FALSE to exclude them from QC
-use_addons <- FALSE
-
+# User input 
 # Input path to results directory from Mad4hatter pipeline
-results_dir <- "~/Library/CloudStorage/Box-Box/IMMRSE-U Study/CNV_analysis/runs/IMMRSE Phase 5/NextSeq/Results-2025-11-20-NextSeq-015//"
-
-# Input path to manifest
-manifest_file <- "~/Library/CloudStorage/Box-Box/IMMRSE-U Study/CNV_analysis/manifests/IMMRSE Phase 5/NextSeq015_manifest.csv"
-
-# Output file paths (absolute paths to ensure correct location)
-reprep_repool_summary_path <- file.path(working_dir, "Output/QC/NextSeq015/reprep_repool_summary.csv")
-polyclonal_information_path <- file.path(working_dir, "Output/QC/NextSeq015/polyclonal_controls.csv")
-neg_control_information_path <- file.path(working_dir, "Output/QC/NextSeq015/negative_control_contamination.csv")
-filtered_allele_data_path <- file.path(working_dir, "Output/QC/NextSeq015/allele_data_filtered.txt")
-missing_loci_report_path <- file.path(working_dir, "Output/QC/NextSeq015/missing_loci_report.csv")
-samples_to_repool_path <- file.path(working_dir, "Output/QC/NextSeq015/samples_to_repool.csv")
-samples_to_reprep_path <- file.path(working_dir, "Output/QC/NextSeq015/samples_to_reprep.csv")
-missing_samples_report_path <- file.path(working_dir, "Output/QC/NextSeq015/missing_samples_report.csv")
-
+results_dir <- "PATH/TO/MAD4HATTER_RESULTS_DIR/"
+# Input path to manifest 
+manifest_file <- "PATH/TO/MANIFEST"
+output_dir <- ""
 ```
 
 ```{r}
-# Validate pipeline mode
-if (!pipeline_mode %in% c("PfPHAST", "MH")) {
-  stop("Invalid pipeline_mode. Must be either 'PfPHAST' or 'MH'.")
-}
-cat("Pipeline Mode:", pipeline_mode, "\n")
+# Path to outputs
+reprep_repool_summary_path <- "reprep_repool_summary.csv"
+polyclonal_information_path <- "positive_control_polyclonal_info.csv"
+neg_control_information_path <- "negative_control_amplified_targets.csv"
+filtered_allele_data_path <- "allele_data_filtered.txt"
+filtered_collapsed_allele_data_path <- "allele_data_collapsed_filtered.txt"
+missing_targets_report_path <- "missing_targets_report.csv"
+samples_to_repool_path <- "samples_to_repool.csv"
+samples_to_reprep_path <- "samples_to_reprep.csv"
+missing_samples_report_path <- "missing_samples_report.csv"
 ```
 
 ```{r}
-#####################################################
-## QC THRESHOLDS AND FILTERS - ADJUST AS NEEDED
-#####################################################
-
 # If TRUE, trims extra sequencing-related information from SampleID to match the manifest format
-standardise_sampleID <- TRUE
-
-# Input a threshold for the reads needed to classify a locus as having amplified successfully
+standardise_sample_name <- TRUE
+# Input a threshold for the reads needed to classify a target as having amplified successfully
 read_threshold <- 100
-
-# Input a minimum Reads per ASV used as a filter for the positive control plot and final allele data
-read_filter <- 0
-
-# Minimum Allele Frequency per ASV used as a filter for positive control plot and final allele data
-af_filter <- 0.01
-
-# Apply WSAF (within-sample allele frequency) filter to final allele data output
-# Set to FALSE to output all alleles regardless of WSAF (will still filter by read count)
-filter_by_wsaf <- FALSE
-
-# Read threshold to output locus information for negative control
-negative_control_read_threshold <- 50
-
+# Input a minimum Reads per ASV used as a filter for the positive control plot
+read_filter <- 0 
+# Minimum Allele Frequency per ASV used as a filter for positive control plot 
+af_filter <- 0.01 
+# Read threshold to output target information for negative control
+negative_control_read_threshold <- 50 
 # Proportion of targets successfully amplified; samples below this threshold require re-prep
-reprep_threshold <- 0.5
-
+reprep_threshold <- 0.5 
 # Proportion of targets successfully amplified; samples below this threshold require re-pool
 repool_threshold <- 0.75
-
-# Allele ID column: Set to "PseudoCIGAR" to collapse to unique PseudoCIGARs, or "ASV" for ASVs
-allele_col <- "PseudoCIGAR"
+# This column indicates the one to be used for an allele ID, either asv or pseudocigar_masked. 
+# If pseudocigar_masked, the table will be collapsed to unique pseudocigar_masked.
+allele_col <- "pseudocigar_masked"
+# Threshold length (including primers) to flag a target as being long. These targets will be filtered from performance metrics as they are known to have a lower performance
+long_target_threshold <- 275
+# If TRUE, af_filter will be applied to final output allele table. If FALSE, only read_filter will be applied 
+filter_wsaf_final_allele_table <- TRUE
+# If FALSE, the first digit of the pool will be used as the reaction. If TRUE, the pool will be used as the reaction 
+reaction_as_pool <- FALSE
 ```
 
 ```{r}
@@ -180,340 +120,226 @@ allele_col <- "PseudoCIGAR"
 cat("============================================\n")
 cat("USER CONFIGURATION SUMMARY\n")
 cat("============================================\n")
-cat("Pipeline Mode:", pipeline_mode, "\n")
-if (pipeline_mode == "PfPHAST") {
-  cat("Use Add-ons:", use_addons, "\n")
-}
 cat("Results Directory:", results_dir, "\n")
 cat("Manifest File:", manifest_file, "\n")
 cat("Read Threshold for Successful Amplification:", read_threshold, "\n")
 cat("Minimum Reads per ASV (Positive Control Filter):", read_filter, "\n")
 cat("Minimum Allele Frequency per ASV (Positive Control Filter):", af_filter, "\n")
-cat("Filter Final Allele Data by WSAF:", filter_by_wsaf, "\n")
 cat("Allele Column:", allele_col, "\n")
 cat("============================================\n")
 ```
 
 ```{r}
-# Create file paths (standard Mad4hatter output files)
-sample_coverage_file <- file.path(results_dir, "sample_coverage.txt")
-amplicon_coverage_file <- file.path(results_dir, "amplicon_coverage.txt")
+# Create file paths 
+sample_coverage_path <- file.path(results_dir,"sample_coverage.txt")
+amplicon_coverage_path <- file.path(results_dir,"amplicon_coverage.txt")
 allele_data_path <- file.path(results_dir, "allele_data.txt")
+collapsed_allele_data_path <- file.path(results_dir, "allele_data_collapsed.txt")
+panel_information_path <- file.path(results_dir, "panel_information/amplicon_info.tsv")
 ```
 
 ```{r}
 # Load necessary libraries
 library(ggplot2)
-library(plotly, quietly = TRUE, warn.conflicts = FALSE)
-library(dplyr, quietly = TRUE, warn.conflicts = FALSE)
+library(plotly, quietly = TRUE,warn.conflicts = FALSE)
+library(dplyr, quietly = TRUE,warn.conflicts = FALSE)
 library(tidyr)
 library(ggbeeswarm)
 library(stringr)
 library(tibble)
 library(purrr)
 library(kableExtra, quietly = TRUE, warn.conflicts = FALSE)
-library(gt)
-```
-
-```{r}
-# UNIFIED EXCLUSION LISTS (used by both PfPHAST and MH modes)
-# These loci are excluded from QC calculations but included in final output
-
-# Species loci (non-P. falciparum markers, ending in -1AB)
-species_loci <- c(
-  'Pf3D7_13_v3-1041593-1041860-1AB',
-  'PmUG01_12_v1-1397996-1398245-1AB',
-  'PocGH01_12_v1-1106456-1106697-1AB',
-  'PvP01_12_v1-1184983-1185208-1AB',
-  'PKNH_12_v2-198869-199113-1AB'
-)
-
-# Long amplicons (>275bp, various suffixes)
-long_loci <- c(
-  'Pf3D7_14_v3-854128-854427-1B',
-  'Pf3D7_11_v3-1294284-1294580-1B',
-  'Pf3D7_13_v3-1465010-1465307-1B',
-  'Pf3D7_13_v3-2841390-2841688-1B2',
-  'Pf3D7_13_v3-2844334-2844629-1B2',
-  'Pf3D7_02_v3-320652-320949-2',
-  'Pf3D7_03_v3-240957-241256-2',
-  'Pf3D7_05_v3-615379-615678-2',
-  'Pf3D7_06_v3-857454-857753-2'
-)
-
-# R1.1-exclusive loci will be identified dynamically for MH mode
-
-# Mode Configuration Object
-config <- list(
-  PfPHAST = list(
-    pool_file = file.path(working_dir, "Data/Pools_PfPHAST_Pools.csv"),
-    reaction_source = "pool_file"
-  ),
-  MH = list(
-    pool_file = file.path(working_dir, "Data/Pools - MADHatTeR Pools content.csv"),
-    reaction_source = "pool_file"
-  )
-)
-active_config <- config[[pipeline_mode]]
 ```
 
 ```{r}
 manifest <- read.csv(manifest_file) %>% mutate(Row = toupper(Row)) # Ensure Row is capitalised
-sample_coverage <- read.csv(sample_coverage_file, sep="\t")
+sample_coverage <- read.csv(sample_coverage_path, sep="\t")
+amplicon_coverage <- read.delim(amplicon_coverage_path)
 allele_data <- read.csv(allele_data_path, sep='\t')
+panel_information <- read.csv(panel_information_path, sep='\t')
 ```
 
 ```{r}
-# Load coverage per amplicon
-amplicon_coverage <- read.delim(amplicon_coverage_file)
-```
-
-```{r}
-# Standardize SampleID if requested
+# Standardize sample names if requested
 amplicon_coverage <- amplicon_coverage %>%
-  mutate(SampleID = if (standardise_sampleID) SampleID %>%
+  mutate(sample_name = if (standardise_sample_name) sample_name %>%
            sub("_L001$", "", .) %>%
-           word(., start = 1, end = -2, sep = "_") else SampleID)
+           word(., start = 1, end = -2, sep = "_") else sample_name)
 allele_data <- allele_data %>%
-  mutate(SampleID = if (standardise_sampleID) SampleID %>%
+  mutate(sample_name = if (standardise_sample_name) sample_name %>%
            sub("_L001$", "", .) %>%
-           word(., start = 1, end = -2, sep = "_") else SampleID)
+           word(., start = 1, end = -2, sep = "_") else sample_name)
+sample_coverage <- sample_coverage %>%
+  mutate(sample_name = if (standardise_sample_name) sample_name %>%
+           sub("_L001$", "", .) %>%
+           word(., start = 1, end = -2, sep = "_") else sample_name)
 ```
+
 :::
 
 ::: {.callout-note collapse="true"}
-## Section A: Locus Filtering
+### Section A: Locus Filtering
 
-Here we filter loci for QC calculations only. The excluded loci will still be included in the final allele_data output.
+Here we filter out two types of targets for QC calculations only:
+
+* **Targets amplifying non-Plasmodium falciparum species**, which are expected to amplify only if other species are present.
+
+* **Long amplicons (>long_target_threshold bp, including primers)**, which tend to underperform due to their length.
+
+These targets should not be considered when assessing the success of a sequencing run, but will still be included in the final allele_data output.
 
 ```{r}
-# Store original allele_data (unfiltered) for final output
-allele_data_original <- allele_data
+# Find long targets to remove 
+panel_information <- panel_information %>%
+  mutate(
+    target_length = (insert_end - insert_start) +
+                    nchar(fwd_primer) +
+                    nchar(rev_primer)
+  )
 
-# UNIFIED EXCLUSION: Both modes use the same hardcoded list
-excluded_loci <- c(species_loci, long_loci)
+# Long loci 
+long_loci <- panel_information %>%
+  filter(target_length > long_target_threshold) %>%
+  pull(target_name)
 
-# Additional exclusion for PfPHAST mode: M1.addon loci if use_addons is FALSE
-addon_loci_excluded <- c()
-if (pipeline_mode == "PfPHAST" && !use_addons) {
-  # Need to load pool file temporarily to identify M1.addon loci
-  pool_file_path <- file.path(working_dir, "Data/Pools_PfPHAST_Pools.csv")
-  if (file.exists(pool_file_path)) {
-    pool_temp <- read.csv(pool_file_path) %>%
-      rename(Locus = Target)
-    addon_loci_excluded <- pool_temp %>%
-      filter(grepl("^M1\\.addon", Pools)) %>%
-      pull(Locus)
-    excluded_loci <- c(excluded_loci, addon_loci_excluded)
-    cat("PfPHAST Mode with Add-ons DISABLED: Excluding", length(addon_loci_excluded), "M1.addon loci from QC\n")
-  }
-}
-
-# Additional exclusion for MH mode: R1.1-exclusive loci (not used in R1.2 primer pool)
-r11_only_loci_excluded <- c()
-if (pipeline_mode == "MH") {
-  # Load pool file to identify R1.1-exclusive loci
-  if (file.exists(active_config$pool_file)) {
-    pool_temp <- read.csv(active_config$pool_file) %>%
-      rename(Locus = Target)
-    r11_only_loci_excluded <- pool_temp %>%
-      filter(Pools == "R1.1") %>%  # Exactly "R1.1", not "R1.1;R1.2" or other combinations
-      pull(Locus)
-    excluded_loci <- c(excluded_loci, r11_only_loci_excluded)
-    cat("MH Mode: Excluding", length(r11_only_loci_excluded), "R1.1-exclusive loci (R1.1 primers not used)\n")
-  }
-}
-
-cat(pipeline_mode, "Mode: Excluding", length(excluded_loci), "loci for QC calculations\n")
-cat("  -", length(species_loci), "species loci (non-P. falciparum markers)\n")
-cat("  -", length(long_loci), "long amplicons (>275bp)\n")
-if (length(addon_loci_excluded) > 0) {
-  cat("  -", length(addon_loci_excluded), "M1.addon loci (add-ons not used)\n")
-}
-if (length(r11_only_loci_excluded) > 0) {
-  cat("  -", length(r11_only_loci_excluded), "R1.1-exclusive loci (R1.1 primers not used)\n")
-}
-cat("\nExcluded species loci:\n")
-for (locus in species_loci) {
-  cat("  ", locus, "\n")
-}
-cat("\nExcluded long loci:\n")
-for (locus in long_loci) {
-  cat("  ", locus, "\n")
-}
-if (length(addon_loci_excluded) > 0) {
-  cat("\nExcluded M1.addon loci (first 10):\n")
-  for (locus in head(addon_loci_excluded, 10)) {
-    cat("  ", locus, "\n")
-  }
-  if (length(addon_loci_excluded) > 10) {
-    cat("  ... and", length(addon_loci_excluded) - 10, "more\n")
-  }
-}
-if (length(r11_only_loci_excluded) > 0) {
-  cat("\nExcluded R1.1-exclusive loci (first 10):\n")
-  for (locus in head(r11_only_loci_excluded, 10)) {
-    cat("  ", locus, "\n")
-  }
-  if (length(r11_only_loci_excluded) > 10) {
-    cat("  ... and", length(r11_only_loci_excluded) - 10, "more\n")
-  }
-}
-
-# Create filtered datasets for QC calculations only
-amplicon_coverage_qc <- amplicon_coverage %>% filter(!Locus %in% excluded_loci)
-allele_data_qc <- allele_data %>% filter(!Locus %in% excluded_loci)
-
-cat("\nLocus counts:\n")
-cat("  Total loci in amplicon_coverage:", n_distinct(amplicon_coverage$Locus), "\n")
-cat("  Loci used for QC (after filtering):", n_distinct(amplicon_coverage_qc$Locus), "\n")
-cat("  Excluded loci will still appear in final allele_data_filtered.txt output\n")
+cat("Long targets being removed:\n")
+cat(unlist(long_loci), sep = "\n")
 ```
+
+```{r}
+# Species Loci to remove 
+old_species_loci_names <- c(
+    'Pf3D7_13_v3-1041593-1041860-1AB',
+    'PmUG01_12_v1-1397996-1398245-1AB',
+    'PocGH01_12_v1-1106456-1106697-1AB',
+    'PvP01_12_v1-1184983-1185208-1AB',
+    'PKNH_12_v2-198869-199113-1AB'
+)
+new_species_loci_names <- c(
+    'Pf3D7_13_v3-1041624-1041829',
+    'PmUG01_12_v1-1398020-1398213',
+    'PocGH01_12_v1-1106482-1106671',
+    'PvP01_12_v1-1185007-1185184',
+    'PKNH_12_v2-0198893-0199083'
+)
+M1addon_loci <- c(
+    'PKNH_MIT_v2-0002298-0002488',
+    'PmUG01_MIT_v1-0000606-0000784',
+    'PocGH01_MIT_v2-0000358-0000550',
+    'PvP01_MIT_v2-0004470-0004642'
+)
+```
+
+```{r}
+# Combine into a list of all unique excluded loci
+excluded_loci <- c(old_species_loci_names, new_species_loci_names, M1addon_loci, long_loci)
+excluded_loci <- unique(excluded_loci)
+
+# Filter amplicon_coverage to exclude rows with loci in the exclusion list
+amplicon_coverage_qc <- amplicon_coverage[!amplicon_coverage$target_name %in% excluded_loci, ]
+
+# Filter allele_data to exclude rows with loci in the exclusion list
+allele_data_qc <- allele_data[!allele_data$target_name %in% excluded_loci, ]
+
+# Filter panel_information to exclude rows with loci in the exclusion list
+panel_information_qc <- panel_information[!panel_information$target_name %in% excluded_loci, ]
+```
+
+```{r}
+cat("\nTarget count summary:\n")
+cat("  Total targets in amplicon_coverage:", n_distinct(amplicon_coverage$target_name), "\n")
+cat("  Targets used for QC (after filtering):", n_distinct(amplicon_coverage_qc$target_name), "\n")
+cat("  Excluded targets will still appear in final allele_data_filtered.txt output\n")
+```
+
 :::
 
 ::: {.callout-note collapse="true"}
-## Section B: Pool File Loading & Reaction Assignment
+### Section B: Pool File Loading & Reaction Assignment
 
 ```{r}
-# Initialize pool_info as NULL
-pool_info <- NULL
-
-if (active_config$reaction_source == "pool_file") {
-  # Both modes: load pool file and extract reactions
-  if (file.exists(active_config$pool_file)) {
-    pool_info <- read.csv(active_config$pool_file) %>%
-      rename(Locus = Target)
-
-    if (pipeline_mode == "PfPHAST") {
-      # PfPHAST: M1.1 and M1.addon -> pool "1", M2.1 -> pool "2"
-      pool_info <- pool_info %>%
-        mutate(reaction = case_when(
-          grepl("^M1\\.", Pools) ~ "1",
-          grepl("^M2\\.", Pools) ~ "2",
-          TRUE ~ NA_character_
-        ))
-    } else {
-      # MH: Extract first digit after letter from Pools column
-      # D1 -> "1", R1.1/R1.2 -> "1", R2.1/R2.2 -> "2"
-      pool_info <- pool_info %>%
-        mutate(reaction = str_extract(Pools, "(?<=[A-Z])\\d+(?=[\\.A-Z]|$)"))
-    }
-
-    # Use amplicon_coverage_qc for loci counting (not allele_data)
-    nloci_table <- amplicon_coverage_qc %>%
-      distinct(Locus) %>%
-      left_join(pool_info %>% select(Locus, reaction), by = "Locus") %>%
-      filter(!is.na(reaction)) %>%
-      count(reaction) %>%
-      rename(nreactionloci = n)
-
-    cat("Loaded pool file:", active_config$pool_file, "\n")
-    cat("Pool assignment:",
-        if(pipeline_mode == "PfPHAST") "M1.x -> pool 1, M2.x -> pool 2"
-        else "First digit after letter: D1/R1.x -> pool 1, R2.x -> pool 2", "\n")
-    cat("Pools found:", paste(nloci_table$reaction, collapse=", "), "\n")
-    cat("Loci per pool:\n")
-    print(nloci_table)
-  } else {
-    warning("Pool file not found:", active_config$pool_file)
-    nloci_table <- data.frame(reaction = character(), nreactionloci = integer())
-  }
+# Add reaction to amplicon table 
+# reaction here refers to 1 of the 2 mPCR reactions. 
+if (reaction_as_pool) {
+  panel_information_qc <- panel_information_qc %>%
+  mutate(
+    reaction = pool
+  )
 } else {
-  stop("Invalid reaction_source in config: '", active_config$reaction_source, "'")
+  panel_information_qc <- panel_information_qc %>%
+  mutate(
+    reaction = (str_extract(pool, "\\d+"))
+  )
 }
 ```
+
+```{r}
+# Count loci per reaction (only including loci that were not filtered above)
+nloci_table <- panel_information_qc %>% 
+    count(reaction) %>% 
+    rename(nreactionloci = n)
+nloci_table |>
+      kable() |>
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+```{r}
+# If you want to manually edit the target counts instead of using the automated draw from the results folder, then uncomment and edit this code
+# reaction_names <- c()
+# target_count <- c()
+
+# # Put into a table
+# nloci_table <- data.frame(
+#   reaction = reaction_names,
+#   nreactionloci = c(target_count)
+# )
+# nloci_table
+```
+
 :::
 
 ```{r}
-merge_data <- function(manifest, sample_coverage, standardise_sampleID) {
+merge_data <- function(manifest, sample_coverage, standardise_sample_name) {
     merged_data <- sample_coverage %>%
-        mutate(SampleID = if (standardise_sampleID) SampleID %>%
-               sub("_L001$", "", .) %>%
-               word(., start = 1, end = -2, sep = "_") else SampleID) %>%
-        mutate(Reads = as.numeric(Reads)) %>%
-        replace_na(list(Reads = 0)) %>%
-        pivot_wider(names_from = Stage, values_from = Reads) %>%
-        inner_join(manifest, by = "SampleID")
+        mutate(reads = suppressWarnings(as.numeric(reads))) %>% 
+        replace_na(list(reads = 0)) %>%
+        pivot_wider(names_from = stage, values_from = reads) %>%
+        inner_join(manifest, by = "sample_name") 
     return(merged_data)
 }
 ```
 
 ```{r}
-# Reformat sample_coverage and add sample information from manifest
-sample_coverage_with_manifest <- merge_data(manifest, sample_coverage, standardise_sampleID)
+# Reformat sample_coverage and add sample information from manifest 
+sample_coverage_with_manifest <- merge_data(manifest, sample_coverage, standardise_sample_name)
 ```
 
 ```{r}
-# Add manifest to amplicon coverage AND add reaction column (COMBINED FOR ATOMICITY)
+# Add manifest to amplicon coverage
 amplicon_coverage_with_manifest <- amplicon_coverage_qc %>%
-    inner_join(manifest, by = c("SampleID"))
-
-# Add reaction column from pool file (both modes)
-if (!exists("pool_info") || is.null(pool_info)) {
-  stop("ERROR: pool_info not loaded. Pool file is required for both PfPHAST and MH modes.\n",
-       "Expected pool file: ", active_config$pool_file)
-}
-
-amplicon_coverage_with_manifest <- amplicon_coverage_with_manifest %>%
-  left_join(pool_info %>% select(Locus, reaction), by = "Locus")
-
-cat("Added reaction column from pool file\n")
-
-# Verify reaction column was added successfully
-if (!"reaction" %in% colnames(amplicon_coverage_with_manifest)) {
-  stop("CRITICAL ERROR: Failed to add 'reaction' column to amplicon_coverage_with_manifest.\n",
-       "This will cause downstream joins to fail.")
-}
-
-# Report success
-cat("✓ Successfully added reaction column\n")
-cat("  Unique reactions found:", paste(sort(unique(amplicon_coverage_with_manifest$reaction[!is.na(amplicon_coverage_with_manifest$reaction)])), collapse=", "), "\n")
-cat("  Rows with NA reaction:", sum(is.na(amplicon_coverage_with_manifest$reaction)), "\n")
-
-# Report which loci have NA reactions (for debugging)
-if (sum(is.na(amplicon_coverage_with_manifest$reaction)) > 0) {
-  na_loci <- amplicon_coverage_with_manifest %>%
-    filter(is.na(reaction)) %>%
-    distinct(Locus) %>%
-    pull(Locus)
-  cat("  Loci with NA reactions:", paste(head(na_loci, 5), collapse=", "),
-      ifelse(length(na_loci) > 5, paste0("... (", length(na_loci), " total)"), ""), "\n")
-}
+    inner_join(manifest,by = c("sample_name")) %>% 
+    left_join(panel_information_qc %>% select(target_name, reaction), by = "target_name") 
 ```
 
 ```{r}
-# Create unfiltered version for negative control analysis (includes all loci)
-amplicon_coverage_with_manifest_full <- amplicon_coverage %>%
-    inner_join(manifest, by = c("SampleID"))
-
-# Add reaction column to the unfiltered version (same logic)
-amplicon_coverage_with_manifest_full <- amplicon_coverage_with_manifest_full %>%
-  left_join(pool_info %>% select(Locus, reaction), by = "Locus")
-
-cat("Created amplicon_coverage_with_manifest_full (includes all loci for negative control analysis)\n")
-cat("  Filtered version loci:", n_distinct(amplicon_coverage_with_manifest$Locus), "\n")
-cat("  Full version loci:", n_distinct(amplicon_coverage_with_manifest_full$Locus), "\n")
-```
-
-```{r}
-# Create sample summary stats (uses QC-filtered amplicon_coverage_with_manifest)
+# Create sample summary stats 
 summary_samples <- amplicon_coverage_with_manifest %>%
   # Join the nloci_table
   left_join(nloci_table, by = "reaction") %>%
   # Calculate number of loci with reads over threshold per reaction
-  group_by(SampleID, Batch, SampleType, reaction, nreactionloci) %>%
+  group_by(sample_name, Batch, SampleType, reaction, nreactionloci) %>%
   summarize(
     reads_per_reaction = sum(OutputPostprocessing),
     n_good_loci = sum(OutputPostprocessing > read_threshold),
     .groups = "drop"
   ) %>%
-    group_by(SampleID, Batch, SampleType) %>%
+    group_by(sample_name, Batch, SampleType) %>%
       mutate(
         reads_per_sample = sum(reads_per_reaction),
       ) %>%
   ungroup() %>%
   mutate(prop_good_loci = n_good_loci / nreactionloci) %>%
-  inner_join(manifest, by = join_by(SampleID, Batch, SampleType))
+  inner_join(manifest, by = join_by(sample_name, Batch, SampleType))
 ```
 
 ```{r}
@@ -526,39 +352,18 @@ sample_colours <- c(
 )
 ```
 
-::: {.callout-note collapse="true"}
-## Section E: Reaction Color Assignment
-
 ```{r}
-# Define reaction colors based on available reactions from BOTH filtered and unfiltered datasets
-# This ensures colors are available for all plots (including negative controls which use full data)
-reactions_filtered <- unique(amplicon_coverage_with_manifest$reaction)
-reactions_full <- unique(amplicon_coverage_with_manifest_full$reaction)
-reactions <- unique(c(reactions_filtered, reactions_full))
-reactions <- reactions[!is.na(reactions)]
-
-if (length(reactions) > 0) {
-  reaction_colours <- setNames(
-    scales::hue_pal()(length(reactions)),
-    reactions
-  )
-  cat("Reaction colors assigned for:", paste(reactions, collapse=", "), "\n")
-} else {
-  # Fallback: create a default color palette
-  reaction_colours <- c("1" = "#F8766D", "2" = "#00BFC4")
-  cat("WARNING: No reactions found in data. Using default color palette.\n")
-}
+reaction_colours <- c("orangered2","skyblue","black","red","green3","blue","cyan","magenta","yellow","gray")
 ```
-:::
 
 ```{r}
 # Print summary of samples in files
 cat("Sample Summary\n")
-cat(length(unique(manifest$SampleID)), "samples in manifest", "\n")
-cat(length(unique(allele_data$SampleID)), "samples in allele data file (unfiltered)", "\n")
-cat(length(unique(allele_data_qc$SampleID)), "samples in allele data file (QC-filtered)", "\n")
-cat(length(unique(sample_coverage$SampleID)), "samples in sample coverage file", "\n")
-cat(length(unique(amplicon_coverage_qc$SampleID)), "samples in amplicon coverage file (QC-filtered)", "\n")
+cat(length(unique(manifest$sample_name)), "samples in manifest", "\n")
+cat(length(unique(allele_data$sample_name)), "samples in allele data file", "\n")
+cat(length(unique(allele_data_qc$sample_name)), "samples in filtered allele data file", "\n")
+cat(length(unique(sample_coverage$sample_name)), "samples in manifest and sample coverage file", "\n")
+cat(length(unique(amplicon_coverage_qc$sample_name)), "samples in manifest and amplicon coverage file", "\n")
 ```
 
 ## Plate Layout
@@ -636,7 +441,7 @@ plot_plate <- function(quadrants_batch, sample_colours, batch_name) {
           theme(
             axis.text = element_text(size = 12),
             strip.text = element_text(size = 14, face = "bold"),
-            panel.grid = element_blank(),
+            panel.grid = element_blank(),  
             plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
           ) +
         # Customizing the legend to add an outline for the colored squares
@@ -690,9 +495,9 @@ Here we visualise the proportion of sequencing reads that are classified as prim
 ```{r}
 # Function to generate the plot
 generate_dimer_plot <- function(sample_coverage_with_manifest, sample_colours) {
-
+    
     dimer_plot <- ggplot(data = sample_coverage_with_manifest %>%  arrange(desc(SampleType))) +
-      # Plot points with different colors for each sample type
+    # Plot points with different colors for each sample type
       geom_point(aes(x = Input + 0.9,
                      y = (1 - OutputPostprocessing / Input) * 100,
                      color = SampleType),
@@ -729,7 +534,7 @@ generate_balancing_plot <- function(summary_samples, sample_colours) {
   ggplot() +
     ggbeeswarm::geom_quasirandom(
     data = summary_samples %>%
-        select(SampleID, Batch, reads_per_sample, SampleType) %>%
+        select(sample_name, Batch, reads_per_sample, SampleType) %>%
         distinct(),
     aes(x = Batch, y = reads_per_sample + 0.9, color = SampleType)
     ) +
@@ -749,31 +554,31 @@ generate_balancing_plot(summary_samples, sample_colours)
 
 ## Control Summary
 
-### Polyclonality of Positive Controls
+### Multiallelic Targets in Positive Controls
 
 ::: {.callout-tip collapse="true"}
 ## About this section
-Here we inspect the positive controls, ensuring that the positive controls perform as expected without contamination or unwanted diversity. For example, if the control you included was monoclonal you would expect little to no loci reported as having more than one allele (polyclonal). In some cases you may allow for some level of false positive detection within a monoclonal control.
+Here we inspect the positive controls, ensuring that the positive controls perform as expected without contamination or unwanted diversity. For example, if the control you included was monoclonal you would expect little to no targets reported as having more than one allele (multiallelic). In some cases you may allow for some level of false positive detection within a monoclonal control. Note that WSAF and total reads per allele filters (as set by default or modified by user) are applied.
 :::
 
 ```{r}
-# Add on within sample allele frequency (use QC version)
+# Add on within sample allele freqeucny 
 allele_data_qc <- allele_data_qc %>%
-  group_by(SampleID, Locus) %>%
-  mutate(AlleleFreq = Reads / sum(Reads)) %>%
+  group_by(sample_name, target_name) %>%
+  mutate(AlleleFreq = reads / sum(reads)) %>%
   ungroup()
 ```
 
 ```{r}
 pos_control_allele_data <- allele_data_qc %>%
-  inner_join(manifest %>% filter(SampleType == "positive"), by = "SampleID")
+  inner_join(manifest %>% filter(SampleType == "positive"), by = "sample_name")
 ```
 
 ```{r}
-if (allele_col == "PseudoCIGAR") {
+if (allele_col=="pseudocigar_masked") {
   pos_control_data <- pos_control_allele_data %>%
-      group_by(SampleID, Locus, PseudoCIGAR) %>%
-      summarise(Reads = sum(Reads), AlleleFreq = sum(AlleleFreq), .groups = "drop")
+      group_by(sample_name, target_name, pseudocigar_masked) %>%
+      summarise(reads = sum(reads), AlleleFreq = sum(AlleleFreq), .groups = "drop")
 } else {
   pos_control_data <- pos_control_allele_data
 }
@@ -782,9 +587,9 @@ if (allele_col == "PseudoCIGAR") {
 ```{r}
 # Apply filters and identify the number of alleles being called per locus
 locus_summary <- pos_control_data %>%
-  group_by(SampleID, Locus) %>%
+  group_by(sample_name, target_name) %>%
   summarise(
-    NumASVs_Meeting_Threshold = sum(Reads > read_filter & AlleleFreq > af_filter),
+    NumASVs_Meeting_Threshold = sum(reads > read_filter & AlleleFreq > af_filter),
     .groups = "drop"
   )
 
@@ -792,22 +597,22 @@ locus_summary <- pos_control_data %>%
 locus_summary <- locus_summary %>%
   mutate(
     Category = case_when(
-      NumASVs_Meeting_Threshold == 1 ~ "Monoclonal",
+      NumASVs_Meeting_Threshold == 1 ~ "Monoallelic",
       NumASVs_Meeting_Threshold == 2 ~ "2 Alleles",
       NumASVs_Meeting_Threshold > 2  ~ ">2 Alleles"
     )
   )
-fill_colors <- c("Monoclonal" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "turquoise3")
+fill_colors <- c("Monoallelic" = "Gray", "2 Alleles" = "orangered2", ">2 Alleles" = "turquoise3")
 
 # Count loci per sample for each category
 result <- locus_summary %>%
-  group_by(SampleID, Category) %>%
+  group_by(sample_name, Category) %>%
   summarise(Count = n(), .groups = "drop")
 
 # Create ggplot
-p <- ggplot(result, aes(x = SampleID, y = Count, fill = Category, text = paste("Count:", Count))) +
+p <- ggplot(result, aes(x = sample_name, y = Count, fill = Category, text = paste("Count:", Count))) +
   geom_bar(stat = "identity", position = "stack") +
-  labs(title = "Clonality of Loci for Positive Controls", x = "Sample ID", y = "Number of Loci") +
+  labs(title = "Alleles per Target for Positive Controls", x = "Sample Name", y = "Number of Targets") +
   theme_minimal() +
   scale_fill_manual(values = fill_colors) +
   theme(
@@ -819,32 +624,33 @@ ggplotly(p, tooltip = "text", width = 800, height = 500)
 ```
 
 ```{r}
-# Filter data to keep only polyclonal loci (2 or more alleles)
+# Filter data to keep only loci with more than one allele (polyclonal cases)
 polyclonal_information <- pos_control_data %>%
-  inner_join(locus_summary, by = c("SampleID", "Locus")) %>%
-  filter(Category %in% c("2 Alleles", ">2 Alleles"))
+  inner_join(locus_summary, by = c("sample_name", "target_name")) %>%
+  filter(Category %in% c("2 Alleles", ">2 Alleles"))  # Keep only polyclonal categories
 
-# Display as styled table
-head(polyclonal_information) |>
-  kable() |>
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+if (nrow(polyclonal_information) == 0) {
+  cat("No multiallelic targets found for positive controls.\n")
+} else {
+    # Display as styled table
+    head(polyclonal_information) |>
+      kable() |>
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+}
 ```
 
-### Negative Control Contamination
+### Negative Control Contamination 
 
 #### Read Summary per Negative Control
-
 ::: {.callout-tip collapse="true"}
 ## About this section
 In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged.
 :::
 
 ```{r}
-#| fig-width: 12
-#| fig-height: 8
-# retrieve negative controls from amplicons.full (use unfiltered version to include all loci)
-amplicons_negative = amplicon_coverage_with_manifest_full %>%
-  filter(SampleType=="negative") %>%
+# retrieve negative controls from amplicons.full
+amplicons_negative = amplicon_coverage_with_manifest %>% 
+  filter(SampleType=="negative") %>% 
   mutate(negative = paste0(Batch," Well: ",toupper(Row),Column))
 ```
 
@@ -859,7 +665,10 @@ batches_with_negatives <- amplicons_negative %>%
   arrange(Batch)
 
 cat("Negative controls by batch:\n")
-print(batches_with_negatives)
+
+batches_with_negatives |>
+  kable() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 
 n_batches <- nrow(batches_with_negatives)
 
@@ -871,30 +680,57 @@ min_height <- 6
 max_height <- 20  # Prevent excessively tall figures
 
 cat("Total batches with negative controls:", n_batches, "\n")
+
+batches_with_negatives_with_reads <- amplicons_negative %>% 
+filter(OutputPostprocessing!=0) %>%
+  group_by(Batch) %>%
+  summarize(
+    n_controls = n_distinct(negative),
+    .groups = "drop"
+  ) %>%
+  arrange(Batch)
+
+n_batches_with_reads <- nrow(batches_with_negatives_with_reads)
+cat("Total batches with negative controls that had reads:", n_batches, "\n")
 ```
 
 ```{r}
 # Plotting helper function for negative control histograms
-plot_negative_control_histogram <- function(data, reaction_colours, batch_name = NULL) {
+plot_negative_control_histogram <- function(data, reaction_colours, batch_name = NULL, remove_zeros = TRUE) {
+  # ensure reaction is a factor
+  data <- data %>% mutate(reaction = factor(reaction))
+
+  # optionally remove zero-read targets
+  if (remove_zeros) {
+    data <- data %>% filter(!is.na(OutputPostprocessing) & OutputPostprocessing > 0)
+  }
+
+  # If nothing to plot, return NULL so caller can skip printing
+  if (nrow(data) == 0) {
+    return(NULL)
+  }
+
+  # compute x and y limits according to your rules
+  max_read <- suppressWarnings(max(data$OutputPostprocessing, na.rm = TRUE))
+  if (!is.finite(max_read)) max_read <- 0
+
+  x_max <- if (max_read < 30) 40 else (max_read + 10)
+  x_limits <- c(0, x_max)
+
+  total_targets <- nrow(data)
+  y_max <- if (total_targets < 90) 10 else (total_targets + 10)
+  y_limits <- c(0.01, y_max)
+
   title_suffix <- if (!is.null(batch_name)) paste0(" - ", batch_name) else ""
 
   p <- ggplot(data) +
-    geom_histogram(aes(x = OutputPostprocessing, fill = reaction)) +
-    facet_wrap(~ negative, ncol = ncol_layout, scales = "free_y") +
-    xlim(-ifelse(
-      max(data$OutputPostprocessing) == 0,
-      1e2,
-      max(data$OutputPostprocessing)
-    ) / 50,
-    ifelse(
-      max(data$OutputPostprocessing) == 0,
-      1e2,
-      max(data$OutputPostprocessing) + 10
-    )) +
+    geom_histogram(aes(x = OutputPostprocessing, fill = reaction), bins = 12, boundary = 0) +  # fewer bins
+    facet_wrap(~ negative, ncol = ncol_layout, scales = "fixed") +
     xlab("Reads") +
     ylab("Number of targets") +
     ggtitle(paste0("Read Distribution per Negative Control", title_suffix)) +
     scale_fill_manual(values = reaction_colours) +
+    coord_cartesian(xlim = x_limits, ylim = y_limits, expand = FALSE) +
     theme_minimal(base_size = 14) +
     theme(
       axis.text = element_text(size = 12),
@@ -913,16 +749,30 @@ plot_negative_control_histogram <- function(data, reaction_colours, batch_name =
 if (n_batches == 1) {
   # Single batch - no tabs needed, just dynamic height
   batch_data <- amplicons_negative
-  n_controls <- n_distinct(batch_data$negative)
 
-  # Calculate height for this batch
-  batch_height <- min(max_height, max(min_height,
+  total_negatives <- n_distinct(batch_data$negative)
+  # If you only want to plot when there are reads, filter here first
+  batch_data_nonzero <- batch_data %>% filter(!is.na(OutputPostprocessing) & OutputPostprocessing > 0)
+  plotted_negatives <- n_distinct(batch_data_nonzero$negative)
+  zero_read_negatives <- total_negatives - plotted_negatives
+
+  if (nrow(batch_data_nonzero) == 0) {
+    cat("No negative controls with reads in this batch — nothing to plot.\n")
+  } else {
+    # concise status line
+    cat(sprintf("Plotting %d/%d negatives (%d zero-read)\n\n", plotted_negatives, total_negatives, zero_read_negatives))
+
+    n_controls <- plotted_negatives
+
+    # Calculate height for this batch
+    batch_height <- min(max_height, max(min_height,
                                        ceiling(n_controls / ncol_layout) * base_height_per_row))
 
-  knitr::opts_chunk$set(fig.width = base_width, fig.height = batch_height)
+    knitr::opts_chunk$set(fig.width = base_width, fig.height = batch_height)
 
-  p <- plot_negative_control_histogram(batch_data, reaction_colours)
-  print(p)
+    p <- plot_negative_control_histogram(batch_data_nonzero, reaction_colours)
+    if (!is.null(p)) print(p)
+  }
 
 } else {
   # Multiple batches - create tabs for each batch
@@ -937,21 +787,37 @@ if (n_batches == 1) {
     batch_data <- amplicons_negative %>%
       filter(Batch == batch)
 
-    # Calculate number of controls in this batch
-    n_controls_in_batch <- n_distinct(batch_data$negative)
+    total_negatives <- n_distinct(batch_data$negative)
+
+    # Remove zero-read rows (we'll only plot batches with reads)
+    batch_data_nonzero <- batch_data %>%
+      filter(!is.na(OutputPostprocessing) & OutputPostprocessing > 0)
+
+    plotted_negatives <- n_distinct(batch_data_nonzero$negative)
+    zero_read_negatives <- total_negatives - plotted_negatives
+
+    # If no reads in this batch, report and skip
+    if (nrow(batch_data_nonzero) == 0) {
+      cat("Skipping batch:\n", batch, "No reads present in any negative controls in this batch.\n\n")
+      next
+    }
+
+    # concise status line
+    cat(sprintf("Plotting reads for %d/%d negative controls (%d had no reads)\n\n", plotted_negatives, total_negatives, zero_read_negatives))
+
+    # Calculate number of controls in this batch (only those with reads)
+    n_controls_in_batch <- plotted_negatives
 
     # Calculate height for this batch
     batch_height <- min(max_height, max(min_height,
-                                         ceiling(n_controls_in_batch / ncol_layout) * base_height_per_row))
+                                       ceiling(n_controls_in_batch / ncol_layout) * base_height_per_row))
 
     # Set figure dimensions for this batch
     knitr::opts_chunk$set(fig.width = base_width, fig.height = batch_height)
 
-    cat("Negative controls in", batch, ":", n_controls_in_batch, "\n\n")
-
     # Create and print plot
-    p <- plot_negative_control_histogram(batch_data, reaction_colours, batch)
-    print(p)
+    p <- plot_negative_control_histogram(batch_data_nonzero, reaction_colours, batch)
+    if (!is.null(p)) print(p)
 
     cat('\n\n')
   }
@@ -964,9 +830,14 @@ knitr::opts_chunk$set(fig.width = 7, fig.height = 5)
 ```
 
 ```{r}
+cat("Summary of negative control targets with reads above threshold (",negative_control_read_threshold,") \n")
 neg_control_information <- amplicons_negative %>%
     filter(OutputPostprocessing > negative_control_read_threshold) %>%
-    select('SampleID','Locus','OutputPostprocessing')
+    select('sample_name','target_name','OutputPostprocessing')
+
+if (nrow(neg_control_information) == 0) {
+  cat("No negative controls had targets with reads over threshold.\n")
+}
 head(neg_control_information) |>
   kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -976,30 +847,29 @@ head(neg_control_information) |>
 
 ::: {.callout-tip collapse="true"}
 ## About this section
-This plot aggregates the total reads for each locus across all negative controls. In negative controls, if there is an unexpected spike in reads for specific loci, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific loci where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
+This plot aggregates the total reads for each target across all negative controls. In negative controls, if there is an unexpected spike in reads for specific targets, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific targets where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
 :::
 
 ```{r}
-#| fig-width: 12
-#| fig-height: 8
 # Get reads for each locus, label reaction and extract chrom and start from locus name
 summary_data <- amplicons_negative %>%
-  group_by(reaction, Locus) %>%
-  summarise(sum_reads = sum(Reads, na.rm = TRUE), .groups = "drop") %>%
+  group_by(reaction, target_name) %>%
+  summarise(sum_reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
   mutate(
-    Chromosome = sub("-.*", "", Locus),
-    Start = as.numeric(sub(".*-(\\d+)-.*", "\\1", Locus))
+    Chromosome = sub("-.*", "", target_name),
+    Start = as.numeric(sub(".*-(\\d+)-.*", "\\1", target_name))
   ) %>%
   arrange(Chromosome, Start) %>%
-  mutate(Locus = factor(Locus, levels = unique(Locus))) %>%
+  mutate(target_name = factor(target_name, levels = unique(target_name))) %>%
+  mutate(reaction = factor(reaction)) %>%
   rowid_to_column("RowID")
 
 # Add a column with a list of sample IDs where Reads > 0 for each locus
 summary_data <- amplicons_negative %>%
-  filter(Reads > 0) %>%
-  group_by(Locus) %>%
-  summarise(samples_with_reads = paste(unique(SampleID), collapse = ", "), .groups = "drop") %>%
-  right_join(summary_data, by = "Locus")
+  filter(reads > 0) %>%
+  group_by(target_name) %>%
+  summarise(samples_with_reads = paste(unique(sample_name), collapse = ", "), .groups = "drop") %>%
+  right_join(summary_data, by = "target_name")
 
 # Reduce x-axis labels: label every nth locus
 nth_label <- 20
@@ -1007,22 +877,20 @@ summary_data <- summary_data %>%
   mutate(Locus_label = ifelse(RowID %% nth_label == 1, paste0(Chromosome, ":", Start), ""))
 
 # Create the bar plot with hover text
-p <- ggplot(summary_data, aes(x = Locus, y = sum_reads, fill = reaction,
-                               text = paste("Locus: ", Locus, "<br>Total Reads: ", sum_reads,
-                                          "<br>Controls with Reads: ", samples_with_reads))) +
+p <- ggplot(summary_data, aes(x = target_name, y = sum_reads, fill = reaction, text = paste("Target: ", target_name, "<br>Total Reads: ", sum_reads, "<br>Controls with Reads: ", samples_with_reads))) +
   geom_bar(stat = "identity", position = "dodge") +
-  xlab("Locus (Chromosome:Start Coordinate)") +
+  xlab("Target (Chromosome:Start Coordinate)") +
   ylab("Sum of Reads Across Controls") +
-  ggtitle("Total Reads per Locus Across Negative Controls") +
-  theme_minimal(base_size = 14) +
+  ggtitle("Total Reads per Target Across Negative Controls") +
+theme_minimal(base_size = 14) +
   theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
     axis.title = element_text(size = 12),
     panel.grid = element_blank(),
     panel.background = element_blank(),
-    legend.position = "top"
+    legend.position = "right"
   ) +
-  scale_x_discrete(labels = summary_data$Locus_label) +
+  scale_x_discrete(labels = summary_data$Locus_label) +  # Apply reduced labels
   scale_fill_manual(values = reaction_colours)
 
 # Convert to interactive plotly plot
@@ -1031,26 +899,25 @@ ggplotly(p, tooltip = "text")
 
 ## Successul Amplification
 
-### Parasitemia vs. Number of Successfully Amplified Loci
-
+### Parasitemia vs. Number of Successfully Amplified Targets
 ::: {.callout-tip collapse="true"}
 ## About this section
-This plot examines the relationship between a sample's parasitemia (qPCR-determined parasite load) and the number of loci that successfully amplified. This plot helps assess whether lower parasitemia samples struggle with amplification, which can indicate potential limitations in sensitivity.
+This plot examines the relationship between a sample's parasitemia (qPCR-determined parasite load) and the number of targets that successfully amplified. This plot helps assess whether lower parasitemia samples struggle with amplification, which can indicate potential limitations in sensitivity.
 :::
 
 ```{r}
 generate_parasitemia_by_amplification_success_plot <- function(summary_samples_for_batch, threshold, sample_colours, batch_name) {
     parasitemia_plot <- ggplot(data = summary_samples_for_batch) +
       # Plot points with different colors for each sample type
-      geom_point(aes(x = Parasitemia + 0.9,
-                     y = prop_good_loci,
+      geom_point(aes(x = Parasitemia + 0.9, 
+                     y = prop_good_loci, 
                      color = SampleType),
                  shape = 1,
                  alpha=0.8,
                  stroke = 1) +
     # Log scale for the x-axis
     scale_x_log10() +
-    ylim(0,1) +
+    ylim(0,1) + 
     # Faceting by Batch column
     facet_grid(rows = vars(reaction),
                scale = "free_y")+
@@ -1061,14 +928,14 @@ generate_parasitemia_by_amplification_success_plot <- function(summary_samples_f
 
     ggtitle(paste0(batch_name, " Amplicons with `good` read depth"))+
     # Color scale for SampleType
-    scale_color_manual(values = sample_colours)
+    scale_color_manual(values = sample_colours) 
 }
 
 generate_parasitemia_by_amplification_success_plots <- function(summary_samples, threshold, sample_colours) {
     plots = list()
     for(b in unique(summary_samples$Batch)){
       summary_samples_batch = summary_samples %>%
-        filter(Batch == b)
+        filter(Batch == b)# %>%
       plots[[b]] = generate_parasitemia_by_amplification_success_plot(summary_samples_batch, read_threshold, sample_colours, b)
     }
     return(plots)
@@ -1089,20 +956,20 @@ if (render_mode) {
 }
 ```
 
-### Sample Reads vs. Number of Successfully Amplified Loci
+### Sample Reads vs. Number of Successfully Amplified Targets
 
 ::: {.callout-tip collapse="true"}
 ## About this section
-This illustrates the relationship between the total number of reads per sample and the number of loci that passed the amplification threshold for that sample. This plot helps evaluate whether samples with higher read counts achieve better amplification success and can reveal potential issues such as insufficient sequencing depth or inefficient amplification. Ideally, a positive correlation should be observed, where higher read counts result in more successfully amplified loci.
+This illustrates the relationship between the total number of reads per sample and the number of targets that passed the amplification threshold for that sample. This plot helps evaluate whether samples with higher read counts achieve better amplification success and can reveal potential issues such as insufficient sequencing depth or inefficient amplification. Ideally, a positive correlation should be observed, where higher read counts result in more successfully amplified targets.
 :::
 
 ```{r}
-generate_reads_by_amplification_success_plot <- function(summary_samples_for_batch, amplification_threshold,
+generate_reads_by_amplification_success_plot <- function(summary_samples_for_batch, amplification_threshold, 
                                                          sample_colours, reprep_threshold, repool_threshold, batch_name) {
-
+    
     amp_plot <- ggplot(data = summary_samples_for_batch) +
       # Plot points with different colors for each sample type
-      geom_point(aes(x = reads_per_sample + 0.9,
+      geom_point(aes(x = reads_per_sample + 0.9,  
                      y=prop_good_loci,
                      color = SampleType),
                  shape=1,
@@ -1127,10 +994,10 @@ generate_reads_by_amplification_success_plot <- function(summary_samples_for_bat
     geom_hline(yintercept = reprep_threshold, linetype = "dashed") +
     geom_hline(yintercept = repool_threshold, linetype = "dashed") +
     # Add labels for the horizontal lines
-    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE),
+    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE), 
                y = reprep_threshold, label = "Reprep", vjust = 1, hjust = 0) +
-    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE),
-               y = repool_threshold, label = "Repool", vjust = 1, hjust = 0)
+    annotate("text", x = min(summary_samples_for_batch$reads_per_sample, na.rm = TRUE), 
+               y = repool_threshold, label = "Repool", vjust = 1, hjust = 0) 
 }
 
 generate_reads_by_amplification_success_plots <- function(summary_samples, read_threshold, sample_colours, reprep_threshold, repool_threshold) {
@@ -1150,7 +1017,7 @@ generate_reads_by_amplification_success_plots <- function(summary_samples, read_
 #| fig-column: screen-inset
 read_plots <- generate_reads_by_amplification_success_plots(summary_samples, read_threshold, sample_colours, reprep_threshold, repool_threshold)
 if (render_mode) {
-  cat(create_tabsetOfGgplotObjects(read_plots))
+  cat(create_tabsetOfGgplotObjects(plots))
 } else {
   for (plot in read_plots) {
     print(plot)
@@ -1159,7 +1026,7 @@ if (render_mode) {
 ```
 
 ::: {.callout-note collapse="true"}
-## Section D: Standardized Output Generation
+## Per Sample QC Outcome Summary
 
 ```{r}
 generate_reprep_repool_table <- function(summary_samples, reprep_threshold, repool_threshold) {
@@ -1171,14 +1038,14 @@ generate_reprep_repool_table <- function(summary_samples, reprep_threshold, repo
           TRUE ~ "pass"
         ),
         reason = case_when(
-          prop_good_loci < reprep_threshold ~ paste("< reprep threshold", reprep_threshold),
-          prop_good_loci < repool_threshold ~ paste("< repool threshold", repool_threshold),
+          prop_good_loci < reprep_threshold ~ paste("< reprep threshold ", reprep_threshold),
+          prop_good_loci < repool_threshold ~ paste("< repool threshold ", repool_threshold),
           TRUE ~ "NA"
         )
       ) %>%
       arrange(desc(status)) %>%
-      select(SampleID, Batch, reaction, status, reason, reads_per_reaction, prop_good_loci)
-
+      select(sample_name, Batch, reaction, status, reason, reads_per_reaction, prop_good_loci)
+    
     return(summary_table)
 }
 ```
@@ -1191,8 +1058,8 @@ fill_missing_data <- function(reprep_repool_summary, manifest) {
 
   # Identify missing samples from manifest
   missing_samples <- manifest %>%
-    filter(!(SampleID %in% reprep_repool_summary$SampleID)) %>%
-    select(SampleID, Batch)
+    filter(!(sample_name %in% reprep_repool_summary$sample_name)) %>%
+    select(sample_name, Batch)
 
   # Create rows for missing SampleIDs with all reactions
   missing_sample_rows <- missing_samples %>%
@@ -1203,13 +1070,13 @@ fill_missing_data <- function(reprep_repool_summary, manifest) {
       reads_per_reaction = 0,
       prop_good_loci = 0
     )
-
+  
   # Ensure all existing samples have all reactions
   missing_reaction_rows <- reprep_repool_summary %>%
-    select(SampleID, Batch) %>%
+    select(sample_name, Batch) %>%
     distinct() %>%
     crossing(reaction = unique_reactions) %>%
-    anti_join(reprep_repool_summary, by = c("SampleID", "Batch", "reaction")) %>%
+    anti_join(reprep_repool_summary, by = c("sample_name", "Batch", "reaction")) %>%
     mutate(
       status = "reprep",
       reason = "no data for reaction",
@@ -1223,9 +1090,10 @@ fill_missing_data <- function(reprep_repool_summary, manifest) {
 ```
 
 ```{r}
+#| scrolled: true
 reprep_repool_summary <- generate_reprep_repool_table(summary_samples, reprep_threshold, repool_threshold)
 reprep_repool_summary <- fill_missing_data(reprep_repool_summary, manifest)
-head(reprep_repool_summary, n = 20) |>
+reprep_repool_summary %>% filter(status!='pass') |>
   kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
@@ -1233,18 +1101,18 @@ head(reprep_repool_summary, n = 20) |>
 ```{r}
 # Calculate pass percentage
 repreps_count <- reprep_repool_summary %>%
-  filter(status == "reprep", !grepl("Control", SampleID)) %>%
-  distinct(SampleID) %>%
+  filter(status == "reprep", !grepl("Control", sample_name)) %>%
+  distinct(sample_name) %>%
   nrow()
 
 repools_count <- reprep_repool_summary %>%
-  filter(status == "repool", !grepl("Control", SampleID)) %>%
-  distinct(SampleID) %>%
+  filter(status == "repool", !grepl("Control", sample_name)) %>%
+  distinct(sample_name) %>%
   nrow()
 
 passedQC_count <- reprep_repool_summary %>%
-  filter(status == "pass", !grepl("Control", SampleID)) %>%
-  distinct(SampleID) %>%
+  filter(status == "pass", !grepl("Control", sample_name)) %>%
+  distinct(sample_name) %>%
   nrow()
 
 total_samples <- repreps_count + repools_count + passedQC_count
@@ -1257,6 +1125,7 @@ if (total_samples > 0) {
   cat("  Pass percentage:", round(percentage_pass, 1), "%\n")
 }
 ```
+
 :::
 
 ## Amplification Plate Maps
@@ -1300,24 +1169,21 @@ plot_plate_with_feature <- function(quadrants_batch, sample_colours, batch_name,
         strip.text = element_text(size = 14, face = "bold"),
         panel.grid = element_blank(),
         plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-        legend.key = element_rect(colour = "black")
-      ) +
+        legend.key = element_rect(colour = "black")  # Ensure visible legend border
+      ) + 
     coord_fixed(ratio = 0.75)
     return(plate_layout)
 }
 
 plot_plate_heat_maps <- function(sample_data, quadrants, sample_colours, fill_param, scale_midpoint, scale_label) {
     plate_maps = list()
-
+    
     quadrants_by_reaction <- crossing(summary_samples %>% select(reaction) %>% distinct() , quadrants)
     merged_data <- merge(summary_samples, quadrants_by_reaction, by = c("Batch", "Row", "Column", "SampleType", "reaction"), all.y = TRUE)
-
+    
     # Ensure NAs in SampleType are labeled
     merged_data$SampleType[is.na(merged_data$SampleType)] <- "empty"
-
-    # Remove rows with NA reactions (artifacts from the crossing/merge operation)
-    merged_data <- merged_data %>% filter(!is.na(reaction))
-
+    
     for(b in unique(merged_data$Batch)){
       merged_data_batch = merged_data %>%
         filter(Batch == b)
@@ -1342,10 +1208,9 @@ if (render_mode) {
 ```
 
 ### Successful Amplification Heatmap
-
 ::: {.callout-tip collapse="true"}
 ## About this section
-Here we visualise the success rate of amplification across the plate, allowing for the identification of poorly amplified regions or wells. This is useful for assessing the quality of the PCR process, ensuring that loci across all samples are adequately amplified, and helping to spot potential issues with specific wells or sample groups.
+Here we visualise the success rate of amplification across the plate, allowing for the identification of poorly amplified regions or wells. This is useful for assessing the quality of the PCR process, ensuring that targets across all samples are adequately amplified, and helping to spot potential issues with specific wells or sample groups.
 :::
 
 ```{r}
@@ -1364,30 +1229,25 @@ if (render_mode) {
 
 ## Save Output Files
 
-::: {.callout-tip collapse="true"}
-## About this section
-All output files are generated consistently for both pipeline modes.
-:::
-
 ```{r}
-# Create output directories if they don't exist
-output_dirs <- unique(dirname(c(
-  reprep_repool_summary_path,
-  polyclonal_information_path,
-  neg_control_information_path,
-  filtered_allele_data_path,
-  missing_loci_report_path,
-  samples_to_repool_path,
-  samples_to_reprep_path,
-  missing_samples_report_path
-)))
-
-for (dir in output_dirs) {
-  if (!dir.exists(dir)) {
-    dir.create(dir, recursive = TRUE)
-    cat("Created output directory:", dir, "\n")
-  }
+if (output_dir!="") {
+    if (!dir.exists(output_dir)) {
+        dir.create(output_dir, recursive = TRUE)
+        cat("Created output directory:", output_dir, "\n")
+      }
+    reprep_repool_summary_path <- file.path(output_dir,reprep_repool_summary_path)
+    polyclonal_information_path <- file.path(output_dir,polyclonal_information_path)
+    neg_control_information_path <- file.path(output_dir, neg_control_information_path)
+    samples_to_repool_path <- file.path(output_dir, samples_to_repool_path) 
+    samples_to_reprep_path <- file.path(output_dir, samples_to_reprep_path)
+    missing_samples_report_path <- file.path(output_dir, missing_samples_report_path)
+    filtered_allele_data_path <- file.path(output_dir, filtered_allele_data_path)
+    filtered_collapsed_allele_data_path <- file.path(output_dir, filtered_collapsed_allele_data_path)
+    missing_targets_report_path <- file.path(output_dir, missing_targets_report_path)
 }
+
+# Create file paths 
+sample_coverage_path <- file.path(results_dir,"sample_coverage.txt")
 
 # Write reprep/repool summary
 write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
@@ -1404,13 +1264,13 @@ cat("Saved:", neg_control_information_path, "\n")
 # Create separate CSV files for samples needing repool and reprep
 samples_to_repool <- reprep_repool_summary %>%
   filter(status == "repool") %>%
-  select(SampleID, Batch, reaction, reads_per_reaction, prop_good_loci, reason) %>%
-  arrange(Batch, SampleID, reaction)
+  select(sample_name, Batch, reaction, reads_per_reaction, prop_good_loci, reason) %>%
+  arrange(Batch, sample_name, reaction)
 
 samples_to_reprep <- reprep_repool_summary %>%
   filter(status == "reprep") %>%
-  select(SampleID, Batch, reaction, reads_per_reaction, prop_good_loci, reason) %>%
-  arrange(Batch, SampleID, reaction)
+  select(sample_name, Batch, reaction, reads_per_reaction, prop_good_loci, reason) %>%
+  arrange(Batch, sample_name, reaction)
 
 write.csv(samples_to_repool, samples_to_repool_path, row.names = FALSE)
 cat("Saved:", samples_to_repool_path, "(", nrow(samples_to_repool), "samples needing repool)\n")
@@ -1418,94 +1278,98 @@ cat("Saved:", samples_to_repool_path, "(", nrow(samples_to_repool), "samples nee
 write.csv(samples_to_reprep, samples_to_reprep_path, row.names = FALSE)
 cat("Saved:", samples_to_reprep_path, "(", nrow(samples_to_reprep), "samples needing reprep)\n")
 
-# CRITICAL: Use allele_data_original (not allele_data_qc) to include excluded loci
 # Read in raw data with no other filtering applied
 allele_data_for_output <- read.csv(allele_data_path, sep='\t')
+collapsed_allele_data_for_output <- read.csv(collapsed_allele_data_path, sep='\t')
 
 # Standardize SampleID
 allele_data_for_output <- allele_data_for_output %>%
-  mutate(SampleID = if (standardise_sampleID) SampleID %>%
+  mutate(sample_name = if (standardise_sample_name) sample_name %>%
            sub("_L001$", "", .) %>%
            word(., start = 1, end = -2, sep = "_") else SampleID)
 
+collapsed_allele_data_for_output <- collapsed_allele_data_for_output %>%
+  mutate(sample_name = if (standardise_sample_name) sample_name %>%
+           sub("_L001$", "", .) %>%
+           word(., start = 1, end = -2, sep = "_") else SampleID)
+         
 # Identify samples in manifest but not in allele data
 samples_in_allele_data <- allele_data_for_output %>%
-  distinct(SampleID) %>%
-  pull(SampleID)
+  distinct(sample_name) %>%
+  pull(sample_name)
 
 missing_samples <- manifest %>%
-  filter(!(SampleID %in% samples_in_allele_data)) %>%
-  select(SampleID, Batch, SampleType, Row, Column, Parasitemia) %>%
-  arrange(Batch, SampleID)
+  filter(!(sample_name %in% samples_in_allele_data)) %>%
+  filter(SampleType != 'negative') %>%
+  select(sample_name, Batch, SampleType, Row, Column, Parasitemia) %>%
+  arrange(Batch, sample_name)
 
 write.csv(missing_samples, missing_samples_report_path, row.names = FALSE)
 cat("Saved:", missing_samples_report_path, "(", nrow(missing_samples), "samples in manifest not found in allele data)\n")
 
-# If using pseudocigar column, then group by this for reads
-if (allele_col == "PseudoCIGAR") {
-  allele_data_for_output <- allele_data_for_output %>%
-      group_by(SampleID, Locus, PseudoCIGAR) %>%
-      summarise(Reads = sum(Reads), .groups = "drop")
-}
-
 # Calculate allele frequency
 allele_data_for_output <- allele_data_for_output %>%
-  group_by(SampleID, Locus) %>%
-  mutate(AlleleFreq = Reads / sum(Reads)) %>%
+  group_by(sample_name, target_name) %>%
+  mutate(AlleleFreq = reads / sum(reads)) %>%
+  ungroup()
+
+collapsed_allele_data_for_output <- collapsed_allele_data_for_output %>%
+  group_by(sample_name, target_name) %>%
+  mutate(AlleleFreq = reads / sum(reads)) %>%
   ungroup()
 
 # Filter to minimum read and within sample allele frequency (if enabled)
-if (filter_by_wsaf) {
+if (filter_wsaf_final_allele_table) {
   allele_data_filtered <- allele_data_for_output %>%
-    filter(Reads > read_filter & AlleleFreq > af_filter)
+    filter(reads > read_filter & AlleleFreq > af_filter)
+  collapsed_allele_data_filtered <- collapsed_allele_data_for_output %>%
+    filter(reads > read_filter & AlleleFreq > af_filter)
   filter_msg <- paste0("Reads > ", read_filter, " AND WSAF > ", af_filter)
 } else {
   # Only filter by read count, not WSAF
   allele_data_filtered <- allele_data_for_output %>%
-    filter(Reads > read_filter)
+    filter(reads > read_filter)
+  collapsed_allele_data_filtered <- collapsed_allele_data_for_output %>%
+    filter(reads > read_filter)
   filter_msg <- paste0("Reads > ", read_filter, " (WSAF filter disabled)")
 }
 
 # Write out table
 write.table(allele_data_filtered, filtered_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
 cat("Saved:", filtered_allele_data_path, "\n")
-cat("  (Includes ALL loci, including those excluded from QC calculations)\n")
+write.table(collapsed_allele_data_filtered, filtered_collapsed_allele_data_path, sep="\t", row.names = FALSE, quote = FALSE)
+cat("Saved:", filtered_collapsed_allele_data_path, "\n")
+cat("  (Includes ALL targets, including those excluded from QC calculations)\n")
 cat("  Filtered by:", filter_msg, "\n")
 ```
 
 ::: {.callout-note collapse="true"}
-## Section F: Missing Loci Report (Conditional)
+### Missing loci report 
 
 ```{r}
-# Missing loci report (attempt for both modes if pool_info exists)
-if (!is.null(pool_info)) {
-  loci_not_in_amplicon_coverage <- pool_info %>%
-    anti_join(amplicon_coverage_qc, by = "Locus") %>%
-    select(Locus, Pools, Category, chromosome)
+loci_not_in_allele_data <- panel_information %>%
+    anti_join(allele_data, by = "target_name") %>%
+    select(target_name, pool, chrom)
 
-  write.csv(loci_not_in_amplicon_coverage, missing_loci_report_path, row.names = FALSE)
-  cat("Saved:", missing_loci_report_path, "\n")
+write.csv(loci_not_in_allele_data, missing_targets_report_path, row.names = FALSE)
+cat("Saved:", missing_targets_report_path, "\n")
 
-  if (nrow(loci_not_in_amplicon_coverage) > 0) {
-    cat("\n## Missing Loci Report\n\n")
-    cat("The following loci are present in the pool file but missing from the amplicon coverage data:\n\n")
+if (nrow(loci_not_in_allele_data) > 0) {
+    cat("\nMissing Targets Report\n\n")
+    cat("The following targets are present in the pool file but missing from the allele data:\n\n")
 
-    missing_loci_table <- loci_not_in_amplicon_coverage %>%
-      arrange(Locus) %>%
+    missing_loci_table <- loci_not_in_allele_data %>%
+      arrange(target_name) %>%
       mutate(No = row_number()) %>%
-      select(No, everything()) %>%
-      gt() %>%
-      tab_header(
-        title = "Loci Present in Pool File but Missing from Data"
-      )
-    print(missing_loci_table)
+      select(No, everything())
+    missing_loci_table |>
+      kable() |>
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
   } else {
-    cat("\nAll loci in pool file were found in the data.\n")
+    cat("\nAll targets in pool file were found in the data.\n")
   }
-} else {
-  cat("\nNo pool file available for missing loci report.\n")
-}
 ```
+
 :::
 
 ## QC Summary by Batch
@@ -1521,8 +1385,8 @@ This visualization shows the overall QC pass rate by batch, with stacked bars re
 
 # Calculate QC status counts by batch
 qc_summary_by_batch <- reprep_repool_summary %>%
-  filter(!grepl("Control", SampleID)) %>%  # Exclude controls
-  distinct(SampleID, Batch, status) %>%
+  filter(!grepl("Control", sample_name)) %>%  # Exclude controls
+  distinct(sample_name, Batch, status) %>%
   group_by(Batch, status) %>%
   summarize(count = n(), .groups = "drop") %>%
   group_by(Batch) %>%
@@ -1575,8 +1439,8 @@ print(qc_plot)
 ```{r}
 # Print summary table
 qc_summary_table <- reprep_repool_summary %>%
-  filter(!grepl("Control", SampleID)) %>%
-  distinct(SampleID, Batch, status) %>%
+  filter(!grepl("Control", sample_name)) %>%
+  distinct(sample_name, Batch, status) %>%
   group_by(Batch, status) %>%
   summarize(count = n(), .groups = "drop") %>%
   # Ensure all status levels exist for each batch
@@ -1595,24 +1459,26 @@ qc_summary_table %>%
 
 ## Summary
 
-::: {.callout-important collapse="false"}
+{.callout-important collapse="false"}
 ## Report Summary
 
-This unified QC report has processed data in **`r pipeline_mode` mode** and generated the following standardized outputs:
+This unified QC report has processed data and generated the following standardized outputs:
 
 1. **`r reprep_repool_summary_path`** - Combined reprep/repool classification for all samples
 2. **`r samples_to_repool_path`** - Samples requiring repool
 3. **`r samples_to_reprep_path`** - Samples requiring reprep
 4. **`r polyclonal_information_path`** - Polyclonality information for positive controls
 5. **`r neg_control_information_path`** - Contamination detected in negative controls
-6. **`r filtered_allele_data_path`** - Filtered allele data meeting read/AF thresholds (includes all loci)
-7. **`r missing_loci_report_path`** - Loci in pool file but absent from data (if applicable)
+6. **`r filtered_allele_data_path`** - Filtered allele data meeting read/AF thresholds (includes all targets)
+7. **`r missing_targets_report_path`** - Targets in pool file but absent from data (if applicable)
 8. **`r missing_samples_report_path`** - Samples in manifest but not found in allele data
 
 ### Key Points
 
-- **Loci filtered for QC**: `r length(excluded_loci)` loci were excluded from QC calculations
-- **QC metrics**: Reprep/repool classifications based on `r n_distinct(amplicon_coverage_qc$Locus)` QC-relevant loci
-- **Final output**: `allele_data_filtered.txt` includes ALL loci (both QC and excluded) meeting thresholds
+- **Targets filtered for QC**: `r length(excluded_loci)` targets were excluded from QC calculations
+- **QC metrics**: Reprep/repool classifications based on `r n_distinct(amplicon_coverage_qc$target_name)` QC-relevant targets
+- **Final output**: `allele_data_filtered.txt` includes ALL targets (both QC and excluded) meeting thresholds
 - **Pass rate**: `r if(exists("percentage_pass")) paste0(round(percentage_pass, 1), "%") else "N/A"`
 :::
+
+
