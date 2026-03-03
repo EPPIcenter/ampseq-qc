@@ -11,6 +11,7 @@ execute:
 ---
 
 
+
 This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
 
 ::: {.callout-note collapse="true"}
@@ -1017,7 +1018,7 @@ generate_reads_by_amplification_success_plots <- function(summary_samples, read_
 #| fig-column: screen-inset
 read_plots <- generate_reads_by_amplification_success_plots(summary_samples, read_threshold, sample_colours, reprep_threshold, repool_threshold)
 if (render_mode) {
-  cat(create_tabsetOfGgplotObjects(plots))
+  cat(create_tabsetOfGgplotObjects(read_plots))
 } else {
   for (plot in read_plots) {
     print(plot)
@@ -1031,6 +1032,7 @@ if (render_mode) {
 ```{r}
 generate_reprep_repool_table <- function(summary_samples, reprep_threshold, repool_threshold) {
     summary_table <- summary_samples %>%
+      filter(SampleType!='negative') %>%
       mutate(
           status = case_when(
           prop_good_loci < reprep_threshold ~ "reprep",
@@ -1459,7 +1461,7 @@ qc_summary_table %>%
 
 ## Summary
 
-{.callout-important collapse="false"}
+::: {.callout-important collapse="false"}
 ## Report Summary
 
 This unified QC report has processed data and generated the following standardized outputs:
