@@ -1,0 +1,361 @@
+"sample_name","Batch","SampleType","reaction","status","reason","reads_per_reaction","prop_good_loci"
+"B1_S02","Batch1","sample","1","reprep","< reprep threshold  0.5",13661,0.160975609756098
+"B1_S02","Batch1","sample","2","reprep","< reprep threshold  0.5",1692,0.25
+"B1_S12","Batch1","sample","1","reprep","< reprep threshold  0.5",16866,0.278048780487805
+"B1_S12","Batch1","sample","2","reprep","< reprep threshold  0.5",1871,0.25
+"B1_S20","Batch1","sample","1","reprep","< reprep threshold  0.5",15019,0.224390243902439
+"B1_S20","Batch1","sample","2","reprep","< reprep threshold  0.5",1751,0.125
+"B1_S24","Batch1","sample","1","reprep","< reprep threshold  0.5",9005,0.0634146341463415
+"B1_S24","Batch1","sample","2","reprep","< reprep threshold  0.5",947,0.0833333333333333
+"B1_S36","Batch1","sample","1","reprep","< reprep threshold  0.5",22856,0.429268292682927
+"B1_S36","Batch1","sample","2","reprep","< reprep threshold  0.5",2828,0.458333333333333
+"B1_S66","Batch1","sample","1","reprep","< reprep threshold  0.5",14524,0.195121951219512
+"B1_S66","Batch1","sample","2","reprep","< reprep threshold  0.5",1553,0.125
+"B1_S71","Batch1","sample","1","reprep","< reprep threshold  0.5",10181,0.0878048780487805
+"B1_S71","Batch1","sample","2","reprep","< reprep threshold  0.5",997,0.0416666666666667
+"B1_S74","Batch1","sample","1","reprep","< reprep threshold  0.5",26926,0.48780487804878
+"B1_S74","Batch1","sample","2","reprep","< reprep threshold  0.5",2904,0.458333333333333
+"B1_S83","Batch1","sample","1","reprep","< reprep threshold  0.5",22291,0.385365853658537
+"B1_S83","Batch1","sample","2","reprep","< reprep threshold  0.5",2606,0.416666666666667
+"B1_S90","Batch1","sample","1","reprep","< reprep threshold  0.5",3817,0.00975609756097561
+"B1_S90","Batch1","sample","2","reprep","< reprep threshold  0.5",490,0
+"B2_S05","Batch2","sample","2","reprep","< reprep threshold  0.5",401,0
+"B2_S06","Batch2","sample","2","reprep","< reprep threshold  0.5",442,0
+"B2_S16","Batch2","sample","1","reprep","< reprep threshold  0.5",14137,0.165853658536585
+"B2_S16","Batch2","sample","2","reprep","< reprep threshold  0.5",1685,0.166666666666667
+"B2_S19","Batch2","sample","1","reprep","< reprep threshold  0.5",4666,0.00975609756097561
+"B2_S19","Batch2","sample","2","reprep","< reprep threshold  0.5",605,0
+"B2_S22","Batch2","sample","1","reprep","< reprep threshold  0.5",15253,0.229268292682927
+"B2_S22","Batch2","sample","2","reprep","< reprep threshold  0.5",1869,0.291666666666667
+"B2_S27","Batch2","sample","1","reprep","< reprep threshold  0.5",23643,0.44390243902439
+"B2_S30","Batch2","sample","1","reprep","< reprep threshold  0.5",18609,0.307317073170732
+"B2_S30","Batch2","sample","2","reprep","< reprep threshold  0.5",2213,0.416666666666667
+"B2_S40","Batch2","sample","1","reprep","< reprep threshold  0.5",3058,0.0048780487804878
+"B2_S40","Batch2","sample","2","reprep","< reprep threshold  0.5",352,0
+"B2_S51","Batch2","sample","1","reprep","< reprep threshold  0.5",21151,0.336585365853659
+"B2_S51","Batch2","sample","2","reprep","< reprep threshold  0.5",2318,0.333333333333333
+"B2_S57","Batch2","sample","1","reprep","< reprep threshold  0.5",12034,0.15609756097561
+"B2_S57","Batch2","sample","2","reprep","< reprep threshold  0.5",1450,0.166666666666667
+"B2_S64","Batch2","sample","1","reprep","< reprep threshold  0.5",5874,0.0195121951219512
+"B2_S64","Batch2","sample","2","reprep","< reprep threshold  0.5",712,0
+"B2_S67","Batch2","sample","1","reprep","< reprep threshold  0.5",6255,0.024390243902439
+"B2_S67","Batch2","sample","2","reprep","< reprep threshold  0.5",626,0
+"B2_S75","Batch2","sample","1","reprep","< reprep threshold  0.5",9511,0.0682926829268293
+"B2_S75","Batch2","sample","2","reprep","< reprep threshold  0.5",904,0.0416666666666667
+"B2_S81","Batch2","sample","1","reprep","< reprep threshold  0.5",11400,0.131707317073171
+"B2_S81","Batch2","sample","2","reprep","< reprep threshold  0.5",1630,0.208333333333333
+"B2_S84","Batch2","sample","1","reprep","< reprep threshold  0.5",9914,0.0926829268292683
+"B2_S84","Batch2","sample","2","reprep","< reprep threshold  0.5",1061,0.0833333333333333
+"B1_S03","Batch1","sample","1","repool","< repool threshold  0.75",30071,0.565853658536585
+"B1_S03","Batch1","sample","2","repool","< repool threshold  0.75",3535,0.5
+"B1_S64","Batch1","sample","1","repool","< repool threshold  0.75",43599,0.692682926829268
+"B1_S64","Batch1","sample","2","repool","< repool threshold  0.75",5112,0.708333333333333
+"B1_S76","Batch1","sample","1","repool","< repool threshold  0.75",29594,0.565853658536585
+"B1_S76","Batch1","sample","2","repool","< repool threshold  0.75",2938,0.625
+"B2_S08","Batch2","sample","1","repool","< repool threshold  0.75",45067,0.731707317073171
+"B2_S08","Batch2","sample","2","repool","< repool threshold  0.75",5048,0.625
+"B2_S15","Batch2","sample","1","repool","< repool threshold  0.75",38165,0.64390243902439
+"B2_S15","Batch2","sample","2","repool","< repool threshold  0.75",4886,0.708333333333333
+"B2_S27","Batch2","sample","2","repool","< repool threshold  0.75",3112,0.5
+"B2_S32","Batch2","sample","1","repool","< repool threshold  0.75",43541,0.697560975609756
+"B2_S36","Batch2","sample","1","repool","< repool threshold  0.75",29963,0.541463414634146
+"B2_S36","Batch2","sample","2","repool","< repool threshold  0.75",3533,0.541666666666667
+"B2_S53","Batch2","sample","1","repool","< repool threshold  0.75",44321,0.658536585365854
+"B2_S71","Batch2","sample","2","repool","< repool threshold  0.75",5397,0.708333333333333
+"B2_S76","Batch2","sample","1","repool","< repool threshold  0.75",42835,0.707317073170732
+"B2_S76","Batch2","sample","2","repool","< repool threshold  0.75",5241,0.708333333333333
+"B2_S82","Batch2","sample","1","repool","< repool threshold  0.75",45589,0.726829268292683
+"B1_POS1","Batch1","positive","1","pass","NA",305733,1
+"B1_POS1","Batch1","positive","2","pass","NA",37249,1
+"B1_POS2","Batch1","positive","1","pass","NA",214604,1
+"B1_POS2","Batch1","positive","2","pass","NA",25946,1
+"B1_S01","Batch1","sample","1","pass","NA",205241,0.995121951219512
+"B1_S01","Batch1","sample","2","pass","NA",24049,1
+"B1_S04","Batch1","sample","1","pass","NA",839912,1
+"B1_S04","Batch1","sample","2","pass","NA",90686,1
+"B1_S05","Batch1","sample","1","pass","NA",351551,1
+"B1_S05","Batch1","sample","2","pass","NA",44849,1
+"B1_S06","Batch1","sample","1","pass","NA",415188,1
+"B1_S06","Batch1","sample","2","pass","NA",41902,1
+"B1_S07","Batch1","sample","1","pass","NA",248436,0.995121951219512
+"B1_S07","Batch1","sample","2","pass","NA",28972,1
+"B1_S08","Batch1","sample","1","pass","NA",51750,0.790243902439024
+"B1_S08","Batch1","sample","2","pass","NA",5926,0.75
+"B1_S09","Batch1","sample","1","pass","NA",484202,1
+"B1_S09","Batch1","sample","2","pass","NA",50446,1
+"B1_S10","Batch1","sample","1","pass","NA",99703,0.946341463414634
+"B1_S10","Batch1","sample","2","pass","NA",10324,0.958333333333333
+"B1_S11","Batch1","sample","1","pass","NA",112612,0.965853658536585
+"B1_S11","Batch1","sample","2","pass","NA",13618,0.958333333333333
+"B1_S13","Batch1","sample","1","pass","NA",196892,0.995121951219512
+"B1_S13","Batch1","sample","2","pass","NA",24136,1
+"B1_S14","Batch1","sample","1","pass","NA",337952,1
+"B1_S14","Batch1","sample","2","pass","NA",45011,1
+"B1_S15","Batch1","sample","1","pass","NA",327572,1
+"B1_S15","Batch1","sample","2","pass","NA",38668,1
+"B1_S16","Batch1","sample","1","pass","NA",143726,0.980487804878049
+"B1_S16","Batch1","sample","2","pass","NA",19766,1
+"B1_S17","Batch1","sample","1","pass","NA",328603,1
+"B1_S17","Batch1","sample","2","pass","NA",43663,1
+"B1_S18","Batch1","sample","1","pass","NA",212260,1
+"B1_S18","Batch1","sample","2","pass","NA",23067,1
+"B1_S19","Batch1","sample","1","pass","NA",89696,0.936585365853659
+"B1_S19","Batch1","sample","2","pass","NA",9110,0.958333333333333
+"B1_S21","Batch1","sample","1","pass","NA",384173,1
+"B1_S21","Batch1","sample","2","pass","NA",44175,1
+"B1_S22","Batch1","sample","1","pass","NA",246286,1
+"B1_S22","Batch1","sample","2","pass","NA",25589,1
+"B1_S23","Batch1","sample","1","pass","NA",121594,0.975609756097561
+"B1_S23","Batch1","sample","2","pass","NA",13560,0.958333333333333
+"B1_S25","Batch1","sample","1","pass","NA",337226,0.995121951219512
+"B1_S25","Batch1","sample","2","pass","NA",37192,1
+"B1_S26","Batch1","sample","1","pass","NA",151043,0.995121951219512
+"B1_S26","Batch1","sample","2","pass","NA",17149,1
+"B1_S27","Batch1","sample","1","pass","NA",249281,1
+"B1_S27","Batch1","sample","2","pass","NA",29619,1
+"B1_S28","Batch1","sample","1","pass","NA",177912,0.985365853658537
+"B1_S28","Batch1","sample","2","pass","NA",19189,1
+"B1_S29","Batch1","sample","1","pass","NA",374301,1
+"B1_S29","Batch1","sample","2","pass","NA",43418,1
+"B1_S30","Batch1","sample","1","pass","NA",234953,1
+"B1_S30","Batch1","sample","2","pass","NA",28170,1
+"B1_S31","Batch1","sample","1","pass","NA",128170,0.975609756097561
+"B1_S31","Batch1","sample","2","pass","NA",14229,1
+"B1_S32","Batch1","sample","1","pass","NA",139595,0.975609756097561
+"B1_S32","Batch1","sample","2","pass","NA",16341,1
+"B1_S33","Batch1","sample","1","pass","NA",287884,1
+"B1_S33","Batch1","sample","2","pass","NA",38311,1
+"B1_S34","Batch1","sample","1","pass","NA",179861,0.990243902439024
+"B1_S34","Batch1","sample","2","pass","NA",17657,1
+"B1_S35","Batch1","sample","1","pass","NA",61478,0.873170731707317
+"B1_S35","Batch1","sample","2","pass","NA",7001,0.875
+"B1_S37","Batch1","sample","1","pass","NA",153150,0.985365853658537
+"B1_S37","Batch1","sample","2","pass","NA",17902,1
+"B1_S38","Batch1","sample","1","pass","NA",265907,1
+"B1_S38","Batch1","sample","2","pass","NA",29996,1
+"B1_S39","Batch1","sample","1","pass","NA",214862,0.990243902439024
+"B1_S39","Batch1","sample","2","pass","NA",23057,1
+"B1_S40","Batch1","sample","1","pass","NA",313486,0.995121951219512
+"B1_S40","Batch1","sample","2","pass","NA",43454,1
+"B1_S41","Batch1","sample","1","pass","NA",127624,0.980487804878049
+"B1_S41","Batch1","sample","2","pass","NA",15792,1
+"B1_S42","Batch1","sample","1","pass","NA",167917,0.995121951219512
+"B1_S42","Batch1","sample","2","pass","NA",20405,1
+"B1_S43","Batch1","sample","1","pass","NA",246111,0.995121951219512
+"B1_S43","Batch1","sample","2","pass","NA",32260,1
+"B1_S44","Batch1","sample","1","pass","NA",328923,1
+"B1_S44","Batch1","sample","2","pass","NA",34517,1
+"B1_S45","Batch1","sample","1","pass","NA",150750,0.985365853658537
+"B1_S45","Batch1","sample","2","pass","NA",16539,1
+"B1_S46","Batch1","sample","1","pass","NA",308714,1
+"B1_S46","Batch1","sample","2","pass","NA",41661,1
+"B1_S47","Batch1","sample","1","pass","NA",285219,1
+"B1_S47","Batch1","sample","2","pass","NA",31306,1
+"B1_S48","Batch1","sample","1","pass","NA",68668,0.858536585365854
+"B1_S48","Batch1","sample","2","pass","NA",8243,0.875
+"B1_S49","Batch1","sample","1","pass","NA",391180,1
+"B1_S49","Batch1","sample","2","pass","NA",43670,1
+"B1_S50","Batch1","sample","1","pass","NA",167004,0.990243902439024
+"B1_S50","Batch1","sample","2","pass","NA",19049,0.958333333333333
+"B1_S51","Batch1","sample","1","pass","NA",478835,1
+"B1_S51","Batch1","sample","2","pass","NA",50460,1
+"B1_S52","Batch1","sample","1","pass","NA",131464,0.985365853658537
+"B1_S52","Batch1","sample","2","pass","NA",15962,1
+"B1_S53","Batch1","sample","1","pass","NA",193410,1
+"B1_S53","Batch1","sample","2","pass","NA",23583,1
+"B1_S54","Batch1","sample","1","pass","NA",286447,1
+"B1_S54","Batch1","sample","2","pass","NA",33199,1
+"B1_S55","Batch1","sample","1","pass","NA",173808,0.995121951219512
+"B1_S55","Batch1","sample","2","pass","NA",17741,1
+"B1_S56","Batch1","sample","1","pass","NA",66269,0.848780487804878
+"B1_S56","Batch1","sample","2","pass","NA",6372,0.791666666666667
+"B1_S57","Batch1","sample","1","pass","NA",311379,1
+"B1_S57","Batch1","sample","2","pass","NA",33730,1
+"B1_S58","Batch1","sample","1","pass","NA",234386,0.995121951219512
+"B1_S58","Batch1","sample","2","pass","NA",27497,1
+"B1_S59","Batch1","sample","1","pass","NA",164240,0.990243902439024
+"B1_S59","Batch1","sample","2","pass","NA",18202,1
+"B1_S60","Batch1","sample","1","pass","NA",330059,1
+"B1_S60","Batch1","sample","2","pass","NA",42504,1
+"B1_S61","Batch1","sample","1","pass","NA",133878,0.995121951219512
+"B1_S61","Batch1","sample","2","pass","NA",16954,1
+"B1_S62","Batch1","sample","1","pass","NA",204323,0.995121951219512
+"B1_S62","Batch1","sample","2","pass","NA",23191,1
+"B1_S63","Batch1","sample","1","pass","NA",305239,1
+"B1_S63","Batch1","sample","2","pass","NA",37805,1
+"B1_S65","Batch1","sample","1","pass","NA",332926,1
+"B1_S65","Batch1","sample","2","pass","NA",35624,1
+"B1_S67","Batch1","sample","1","pass","NA",239472,1
+"B1_S67","Batch1","sample","2","pass","NA",29998,1
+"B1_S68","Batch1","sample","1","pass","NA",237183,1
+"B1_S68","Batch1","sample","2","pass","NA",25766,1
+"B1_S69","Batch1","sample","1","pass","NA",462420,1
+"B1_S69","Batch1","sample","2","pass","NA",64048,1
+"B1_S70","Batch1","sample","1","pass","NA",353293,1
+"B1_S70","Batch1","sample","2","pass","NA",36455,1
+"B1_S72","Batch1","sample","1","pass","NA",83354,0.946341463414634
+"B1_S72","Batch1","sample","2","pass","NA",8250,0.958333333333333
+"B1_S73","Batch1","sample","1","pass","NA",308627,1
+"B1_S73","Batch1","sample","2","pass","NA",35763,1
+"B1_S75","Batch1","sample","1","pass","NA",264554,0.995121951219512
+"B1_S75","Batch1","sample","2","pass","NA",31938,1
+"B1_S77","Batch1","sample","1","pass","NA",318958,1
+"B1_S77","Batch1","sample","2","pass","NA",40687,1
+"B1_S78","Batch1","sample","1","pass","NA",415053,1
+"B1_S78","Batch1","sample","2","pass","NA",38730,1
+"B1_S79","Batch1","sample","1","pass","NA",500982,1
+"B1_S79","Batch1","sample","2","pass","NA",62986,1
+"B1_S80","Batch1","sample","1","pass","NA",296313,0.995121951219512
+"B1_S80","Batch1","sample","2","pass","NA",29618,1
+"B1_S81","Batch1","sample","1","pass","NA",213880,0.985365853658537
+"B1_S81","Batch1","sample","2","pass","NA",25804,1
+"B1_S82","Batch1","sample","1","pass","NA",187377,0.995121951219512
+"B1_S82","Batch1","sample","2","pass","NA",24262,1
+"B1_S84","Batch1","sample","1","pass","NA",615627,1
+"B1_S84","Batch1","sample","2","pass","NA",72802,1
+"B1_S85","Batch1","sample","1","pass","NA",277998,1
+"B1_S85","Batch1","sample","2","pass","NA",30913,1
+"B1_S86","Batch1","sample","1","pass","NA",207332,0.995121951219512
+"B1_S86","Batch1","sample","2","pass","NA",21272,1
+"B1_S87","Batch1","sample","1","pass","NA",232274,1
+"B1_S87","Batch1","sample","2","pass","NA",27239,1
+"B1_S88","Batch1","sample","1","pass","NA",95184,0.951219512195122
+"B1_S88","Batch1","sample","2","pass","NA",10554,0.958333333333333
+"B1_S89","Batch1","sample","1","pass","NA",311875,1
+"B1_S89","Batch1","sample","2","pass","NA",37791,1
+"B1_S91","Batch1","sample","1","pass","NA",313363,1
+"B1_S91","Batch1","sample","2","pass","NA",37905,1
+"B1_S92","Batch1","sample","1","pass","NA",82890,0.91219512195122
+"B1_S92","Batch1","sample","2","pass","NA",8827,0.916666666666667
+"B2_POS1","Batch2","positive","1","pass","NA",252746,1
+"B2_POS1","Batch2","positive","2","pass","NA",24206,1
+"B2_POS2","Batch2","positive","1","pass","NA",196814,0.995121951219512
+"B2_POS2","Batch2","positive","2","pass","NA",26075,1
+"B2_S01","Batch2","sample","1","pass","NA",259027,1
+"B2_S01","Batch2","sample","2","pass","NA",26886,1
+"B2_S02","Batch2","sample","1","pass","NA",200291,1
+"B2_S02","Batch2","sample","2","pass","NA",24381,1
+"B2_S03","Batch2","sample","1","pass","NA",88491,0.946341463414634
+"B2_S03","Batch2","sample","2","pass","NA",10150,0.875
+"B2_S04","Batch2","sample","1","pass","NA",101735,0.965853658536585
+"B2_S04","Batch2","sample","2","pass","NA",10287,1
+"B2_S05","Batch2","sample","1","pass","NA",178550,1
+"B2_S06","Batch2","sample","1","pass","NA",197302,0.990243902439024
+"B2_S07","Batch2","sample","1","pass","NA",192242,1
+"B2_S07","Batch2","sample","2","pass","NA",22876,1
+"B2_S09","Batch2","sample","1","pass","NA",60673,0.824390243902439
+"B2_S09","Batch2","sample","2","pass","NA",6377,0.833333333333333
+"B2_S10","Batch2","sample","1","pass","NA",111059,0.965853658536585
+"B2_S10","Batch2","sample","2","pass","NA",13951,0.958333333333333
+"B2_S11","Batch2","sample","1","pass","NA",103075,0.960975609756098
+"B2_S11","Batch2","sample","2","pass","NA",11410,0.958333333333333
+"B2_S12","Batch2","sample","1","pass","NA",169588,0.980487804878049
+"B2_S12","Batch2","sample","2","pass","NA",17585,1
+"B2_S13","Batch2","sample","1","pass","NA",111596,0.970731707317073
+"B2_S13","Batch2","sample","2","pass","NA",13944,0.958333333333333
+"B2_S14","Batch2","sample","1","pass","NA",194908,0.995121951219512
+"B2_S14","Batch2","sample","2","pass","NA",19679,1
+"B2_S17","Batch2","sample","1","pass","NA",122150,0.990243902439024
+"B2_S17","Batch2","sample","2","pass","NA",14988,0.958333333333333
+"B2_S18","Batch2","sample","1","pass","NA",214192,0.995121951219512
+"B2_S18","Batch2","sample","2","pass","NA",24655,1
+"B2_S21","Batch2","sample","1","pass","NA",199400,0.990243902439024
+"B2_S21","Batch2","sample","2","pass","NA",23511,1
+"B2_S23","Batch2","sample","1","pass","NA",158234,0.990243902439024
+"B2_S23","Batch2","sample","2","pass","NA",17412,1
+"B2_S24","Batch2","sample","1","pass","NA",217388,0.990243902439024
+"B2_S24","Batch2","sample","2","pass","NA",26890,1
+"B2_S25","Batch2","sample","1","pass","NA",196309,0.995121951219512
+"B2_S25","Batch2","sample","2","pass","NA",24525,1
+"B2_S26","Batch2","sample","1","pass","NA",70785,0.907317073170732
+"B2_S26","Batch2","sample","2","pass","NA",7733,0.916666666666667
+"B2_S28","Batch2","sample","1","pass","NA",166890,0.995121951219512
+"B2_S28","Batch2","sample","2","pass","NA",19125,1
+"B2_S29","Batch2","sample","1","pass","NA",154097,0.985365853658537
+"B2_S29","Batch2","sample","2","pass","NA",16455,1
+"B2_S31","Batch2","sample","1","pass","NA",93047,0.960975609756098
+"B2_S31","Batch2","sample","2","pass","NA",11679,0.875
+"B2_S32","Batch2","sample","2","pass","NA",5533,0.75
+"B2_S33","Batch2","sample","1","pass","NA",130773,0.990243902439024
+"B2_S33","Batch2","sample","2","pass","NA",16575,0.958333333333333
+"B2_S34","Batch2","sample","1","pass","NA",99289,0.921951219512195
+"B2_S34","Batch2","sample","2","pass","NA",9583,0.916666666666667
+"B2_S35","Batch2","sample","1","pass","NA",140648,0.980487804878049
+"B2_S35","Batch2","sample","2","pass","NA",17261,1
+"B2_S37","Batch2","sample","1","pass","NA",74701,0.91219512195122
+"B2_S37","Batch2","sample","2","pass","NA",8364,0.875
+"B2_S38","Batch2","sample","1","pass","NA",96447,0.931707317073171
+"B2_S38","Batch2","sample","2","pass","NA",11240,0.916666666666667
+"B2_S39","Batch2","sample","1","pass","NA",109413,0.980487804878049
+"B2_S39","Batch2","sample","2","pass","NA",14068,1
+"B2_S41","Batch2","sample","1","pass","NA",189452,1
+"B2_S41","Batch2","sample","2","pass","NA",21397,1
+"B2_S42","Batch2","sample","1","pass","NA",187103,1
+"B2_S42","Batch2","sample","2","pass","NA",19343,1
+"B2_S43","Batch2","sample","1","pass","NA",179291,0.995121951219512
+"B2_S43","Batch2","sample","2","pass","NA",19603,1
+"B2_S44","Batch2","sample","1","pass","NA",141294,0.985365853658537
+"B2_S44","Batch2","sample","2","pass","NA",15865,0.958333333333333
+"B2_S45","Batch2","sample","1","pass","NA",142080,0.995121951219512
+"B2_S45","Batch2","sample","2","pass","NA",17115,0.958333333333333
+"B2_S46","Batch2","sample","1","pass","NA",101074,0.975609756097561
+"B2_S46","Batch2","sample","2","pass","NA",10650,0.958333333333333
+"B2_S47","Batch2","sample","1","pass","NA",133702,0.980487804878049
+"B2_S47","Batch2","sample","2","pass","NA",16567,0.958333333333333
+"B2_S48","Batch2","sample","1","pass","NA",156225,0.990243902439024
+"B2_S48","Batch2","sample","2","pass","NA",15836,1
+"B2_S49","Batch2","sample","1","pass","NA",80824,0.921951219512195
+"B2_S49","Batch2","sample","2","pass","NA",11527,0.958333333333333
+"B2_S50","Batch2","sample","1","pass","NA",181757,0.995121951219512
+"B2_S50","Batch2","sample","2","pass","NA",23705,0.958333333333333
+"B2_S52","Batch2","sample","1","pass","NA",138924,0.985365853658537
+"B2_S52","Batch2","sample","2","pass","NA",16711,0.958333333333333
+"B2_S53","Batch2","sample","2","pass","NA",5706,0.75
+"B2_S54","Batch2","sample","1","pass","NA",250967,1
+"B2_S54","Batch2","sample","2","pass","NA",28124,1
+"B2_S55","Batch2","sample","1","pass","NA",206129,0.995121951219512
+"B2_S55","Batch2","sample","2","pass","NA",25547,1
+"B2_S56","Batch2","sample","1","pass","NA",238984,1
+"B2_S56","Batch2","sample","2","pass","NA",27089,1
+"B2_S58","Batch2","sample","1","pass","NA",132522,0.985365853658537
+"B2_S58","Batch2","sample","2","pass","NA",16374,0.958333333333333
+"B2_S59","Batch2","sample","1","pass","NA",313583,1
+"B2_S59","Batch2","sample","2","pass","NA",36325,1
+"B2_S60","Batch2","sample","1","pass","NA",124556,0.980487804878049
+"B2_S60","Batch2","sample","2","pass","NA",13772,0.958333333333333
+"B2_S61","Batch2","sample","1","pass","NA",94731,0.946341463414634
+"B2_S61","Batch2","sample","2","pass","NA",9875,1
+"B2_S62","Batch2","sample","1","pass","NA",247623,1
+"B2_S62","Batch2","sample","2","pass","NA",26412,1
+"B2_S63","Batch2","sample","1","pass","NA",64315,0.839024390243902
+"B2_S63","Batch2","sample","2","pass","NA",6018,0.75
+"B2_S65","Batch2","sample","1","pass","NA",112060,0.965853658536585
+"B2_S65","Batch2","sample","2","pass","NA",12869,1
+"B2_S66","Batch2","sample","1","pass","NA",165579,0.990243902439024
+"B2_S66","Batch2","sample","2","pass","NA",16916,1
+"B2_S68","Batch2","sample","1","pass","NA",159329,0.985365853658537
+"B2_S68","Batch2","sample","2","pass","NA",19224,1
+"B2_S69","Batch2","sample","1","pass","NA",182054,0.995121951219512
+"B2_S69","Batch2","sample","2","pass","NA",18865,1
+"B2_S70","Batch2","sample","1","pass","NA",250415,0.995121951219512
+"B2_S70","Batch2","sample","2","pass","NA",27016,1
+"B2_S71","Batch2","sample","1","pass","NA",49087,0.775609756097561
+"B2_S72","Batch2","sample","1","pass","NA",80340,0.897560975609756
+"B2_S72","Batch2","sample","2","pass","NA",8639,0.916666666666667
+"B2_S73","Batch2","sample","1","pass","NA",458044,1
+"B2_S73","Batch2","sample","2","pass","NA",52222,1
+"B2_S74","Batch2","sample","1","pass","NA",53714,0.834146341463415
+"B2_S74","Batch2","sample","2","pass","NA",6559,0.916666666666667
+"B2_S77","Batch2","sample","1","pass","NA",75500,0.91219512195122
+"B2_S77","Batch2","sample","2","pass","NA",8507,0.875
+"B2_S78","Batch2","sample","1","pass","NA",91706,0.965853658536585
+"B2_S78","Batch2","sample","2","pass","NA",9551,0.916666666666667
+"B2_S79","Batch2","sample","1","pass","NA",58473,0.839024390243902
+"B2_S79","Batch2","sample","2","pass","NA",6388,0.75
+"B2_S80","Batch2","sample","1","pass","NA",149760,0.985365853658537
+"B2_S80","Batch2","sample","2","pass","NA",19627,1
+"B2_S82","Batch2","sample","2","pass","NA",5124,0.791666666666667
+"B2_S83","Batch2","sample","1","pass","NA",243395,1
+"B2_S83","Batch2","sample","2","pass","NA",29582,1
+"B2_S20","Batch2","sample","1","reprep","no data for sample",0,0
+"B2_S20","Batch2","sample","2","reprep","no data for sample",0,0
