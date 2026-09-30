@@ -332,8 +332,6 @@ qc_summary_table(qc_calls)
 #> 2 Batch2    66      9     16    91      72.5
 qc_summary_by_batch(qc_calls) |>
   plot_qc_status_by_batch()
-#> Warning: Removed 1 row containing missing values or values outside the scale range
-#> (`geom_bar()`).
 ```
 
 ![](ampseqQC_files/figure-html/unnamed-chunk-14-1.png)
