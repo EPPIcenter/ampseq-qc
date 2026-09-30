@@ -1,93 +1,114 @@
-# QC Summary
+# ampseqQC
 
-This code is designed for visualizing and summarizing QC data from targeted amplicon sequencing of Plasmodium. 
+`ampseqQC` summarises QC statistics for targeted amplicon sequencing of Plasmodium processed with the [Mad4hatter](https://github.com/EPPIcenter/mad4hatter) pipeline. It combines the pipeline outputs with a sample manifest to produce an HTML QC report, pass/repool/reprep calls for each sample, control summaries and filtered allele tables.
 
-## Running the Interactive Document 
+The QC is run separately from the pipeline so that it can be run once the sample manifest is available.
 
-The QC report is available in both **Quarto Markdown** (.qmd) and **Jupyter Notebook** (.ipynb) formats. You can choose whichever format is more convenient for your workflow.
+## Installation
 
-**Using the Quarto Markdown File (QC_report.qmd)**
-1. Open the .qmd file in an editor like RStudio or Visual Studio Code.
-2. Edit the paths to the required input files and any thresholds at the beginning of the document to match your data location.
-3. To render the document and generate an HTML report:
-    * In RStudio, click Render.
-    * In Visual Studio Code, use the Quarto extension to render the document.
-4. The rendered HTML report will summarize your QC data and display the visualizations.
+```r
+# install.packages("remotes")
+remotes::install_github("EPPIcenter/ampseq-qc")
+```
 
-**Using the Jupyter Notebook (QC_report.ipynb)**
-1. Open the .ipynb file in Jupyter Notebook.
-2. Edit the paths to the required input files and any thresholds at the beginning of the document to match your data location.
-3. Run through the code interactively.
-4. Select **File > Save and Export Notebook As > HTML** to save the rendered notebook as an HTML file.
+Rendering the report also requires the [Quarto CLI](https://quarto.org/docs/get-started/).
 
-## Required Inputs 
+## Rendering the QC report
 
-To proceed, you must provide the **results directory** from the Mad4hatter pipeline, which should include the following files:
+```r
+library(ampseqQC)
+
+render_qc_report(
+  results_dir = "path/to/mad4hatter/results",
+  manifest_file = "path/to/manifest.csv",
+  output_dir = "qc_output"
+)
+```
+
+Thresholds can be changed with the arguments of `render_qc_report()` (see `?render_qc_report`), for example `read_threshold`, `reprep_threshold` and `repool_threshold`.
+
+From the command line:
+
+```bash
+Rscript -e 'ampseqQC::render_qc_report("path/to/results", "path/to/manifest.csv", output_dir = "qc_output")'
+```
+
+The report template can be found with `qc_report_template()` if you want to copy and customise it.
+
+## Required inputs
+
+The **results directory** from the Mad4hatter pipeline must include:
 
 * **sample_coverage.txt**
 * **amplicon_coverage.txt**
 * **allele_data.txt**
+* **panel_information/amplicon_info.tsv**
 
-Additionally, a **sample manifest** (CSV) is required. This file must contain the following fields:
+If present, **allele_data_collapsed.txt** and the **resistance_marker_module** tables are also filtered and written out.
 
-* **SampleID** – Unique identifier for each sample.
+A **sample manifest** (comma or semicolon separated) must contain:
+
+* **sample_name** – Unique identifier for each sample.
 * **SampleType** – Specifies whether the entry is a **sample**, **positive** control, or **negative** control.
 * **Batch** – Identifies a group of samples processed simultaneously by the same individual.
 * **Column** – The well column where the sample was placed in the plate.
 * **Row** – The well row where the sample was placed in the plate.
 * **Parasitemia** – The qPCR value for the sample.
 
-## Development 
-If you'd like to make changes to the Jupyter Notebook, follow these steps:
-1. Edit the Notebook (QC_report.ipynb) as needed.
-2. Once finished, convert the notebook to a Quarto Markdown file:
-```bash
-quarto convert QC_report.ipynb
+## Panels, pools and reactions
+
+The pools in a run are read from the `pool` column of `panel_information/amplicon_info.tsv`, so any combination or subset of pools is supported. Panel settings map each pool to the mPCR reaction it was amplified in, and list targets to exclude from QC calculations (they are still kept in the filtered allele tables).
+
+`default_panel_settings()` covers the MAD4HatTeR and PfPHAST pools, including versioned and legacy names, using the recommended two-reaction layout:
+
+| Reaction | Pools |
+| -------- | ----- |
+| 1 | D1, D1.1, 1A, R1, R1.1, R1.2, 1B, 5, M1, M1.1, M1.addon |
+| 2 | R2, R2.1, 2, M2, M2.1 |
+
+Targets shared by pools in different reactions are counted in each reaction. If a run contains a pool with no reaction defined, the report stops and asks for one. Use `panel_settings()` to add pools or change the layout:
+
+```r
+# Add a bespoke pool
+panel <- panel_settings(c(AMPLseq = "3"), base = default_panel_settings())
+
+# R1.2 run in its own reaction
+panel <- panel_settings(c(R1 = "3", R1.2 = "3"), base = default_panel_settings())
+
+render_qc_report("path/to/results", "path/to/manifest.csv", panel = panel)
 ```
-3. In the converted .qmd file, ensure the following YAML header is present at the top for proper rendering:
-```yaml
----
-title: "QC Report"
-author: ""
-output: 
-  html_document:
-    code-fold: true
-    strip-comments: true
-    toc: true
-execute: 
-  echo: false
----
+
+## Using the functions directly
+
+All of the QC steps are exported, so they can be used outside the report, for example:
+
+```r
+results <- read_mad4hatter_results("path/to/results")
+manifest <- read_manifest("path/to/manifest.csv")
+
+excluded <- qc_excluded_targets(results$panel_information)
+panel_reactions <- assign_reactions(results$panel_information) |>
+  dplyr::filter(!target_name %in% excluded$excluded)
+amplicon_coverage_qc <- results$amplicon_coverage |>
+  dplyr::filter(!target_name %in% excluded$excluded)
+
+summary_samples <- summarise_samples(
+  merge_amplicon_coverage(amplicon_coverage_qc, manifest, panel_reactions),
+  count_targets_per_reaction(panel_reactions),
+  manifest,
+  read_threshold = 100
+)
+qc_calls <- generate_reprep_repool_table(summary_samples) |>
+  fill_missing_data(manifest)
 ```
-This will ensure that the report is formatted correctly when rendered as HTML.
 
-## Installation
+## Development
 
-To run the Shiny app, follow these steps:
-
-1. Clone the repository to your local machine:
-
-```bash
-git clone <repository_url>
+```r
+devtools::document()
+devtools::test()
+devtools::check()
 ```
-2. Install dependencies by running the following command in R:
-
-```R
-install.packages(c("shiny", "ggplot2", "dplyr", "quarto"))
-```
-3. Run the app with the following command:
-
-```bash
-Rscript app.R
-```
-This will launch the Shiny app on your local machine where you can interactively explore and visualize your QC data.
-
-## Future Development 
-* Extract out the functions as a package 
-* Turn this into an R shiny app 
-* Make sure that it works with multiple plates etc and plots format correctly
-* Add option for well instead of row, column
-* manifest could be tsv, csv...
-* Write a generate manifest function which populates sampleID with the columns from madhatter repo
 
 ## Acknowledgments
 This code is based on QC plots developed by 
