@@ -6,3 +6,8 @@
 ^QC_report_files$
 ^\.quarto$
 ^\.cursor$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
+^data-raw$

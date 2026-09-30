@@ -1,0 +1,77 @@
+url: https://eppicenter.github.io/ampseq-qc/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, example]
+    right: [search, github]
+  components:
+    example:
+      text: Example report
+      href: example-report/QC_report.html
+
+reference:
+  - title: QC report
+    contents:
+      - render_qc_report
+      - qc_report_template
+  - title: Loading data
+    contents:
+      - read_mad4hatter_results
+      - read_manifest
+      - standardise_sample_names
+  - title: Panel settings
+    desc: Map pools to reactions and choose targets to exclude from QC.
+    contents:
+      - panel_settings
+      - default_panel_settings
+      - assign_reactions
+      - summarise_pools
+      - qc_excluded_targets
+  - title: Amplification success and QC calls
+    contents:
+      - merge_sample_coverage
+      - merge_amplicon_coverage
+      - count_targets_per_reaction
+      - summarise_samples
+      - generate_reprep_repool_table
+      - fill_missing_data
+      - samples_with_status
+      - qc_status_counts
+      - qc_summary_by_batch
+  - title: Controls
+    contents:
+      - add_allele_frequency
+      - summarise_positive_controls
+      - negative_control_amplicons
+      - negative_control_targets_over_threshold
+      - summarise_negative_control_targets
+  - title: Output tables
+    contents:
+      - filter_allele_table
+      - allele_table_group_cols
+      - missing_samples_report
+      - missing_targets_report
+  - title: Plots
+    contents:
+      - create_plate_template
+      - plot_plate
+      - generate_dimer_plot
+      - generate_balancing_plot
+      - generate_reads_by_amplification_success_plot
+      - generate_parasitemia_by_amplification_success_plot
+      - plot_plate_with_feature
+      - plot_positive_control_alleles
+      - plot_negative_control_histogram
+      - negative_control_plot_height
+      - plot_negative_control_target_reads
+      - plot_qc_status_by_batch
+  - title: Report helpers
+    desc: Helpers used by the report template.
+    contents:
+      - styled_table
+      - interactive_plot
+      - create_tabset
+      - print_sized_plot

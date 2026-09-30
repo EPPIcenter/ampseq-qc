@@ -13,6 +13,8 @@ Description: Summarises quality control statistics for targeted amplicon
     pass, repool or reprep, summarise positive and negative controls, filter
     allele tables, and render an HTML QC report.
 License: GPL-3
+URL: https://eppicenter.github.io/ampseq-qc/, https://github.com/EPPIcenter/ampseq-qc
+BugReports: https://github.com/EPPIcenter/ampseq-qc/issues
 Encoding: UTF-8
 Depends:
     R (>= 4.1.0)
@@ -29,8 +31,10 @@ Imports:
     tibble,
     tidyr
 Suggests:
+    rmarkdown,
     testthat (>= 3.0.0),
     withr
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

@@ -122,8 +122,8 @@ render_qc_report <- function(results_dir,
     stop("`panel` must be created with panel_settings() or default_panel_settings().", call. = FALSE)
   }
 
-  output_dir <- normalizePath(output_dir, mustWork = FALSE)
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  output_dir <- normalizePath(output_dir, mustWork = TRUE)
 
   work_dir <- tempfile("ampseqQC_")
   dir.create(work_dir)
