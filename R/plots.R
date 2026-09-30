@@ -444,5 +444,6 @@ plot_qc_status_by_batch <- function(qc_summary_by_batch) {
       legend.position = "top",
       panel.grid.major.x = ggplot2::element_blank()
     ) +
-    ggplot2::ylim(0, 100)
+    # ylim() would drop the top bar when stacked percentages sum to just over 100
+    ggplot2::coord_cartesian(ylim = c(0, 100))
 }
