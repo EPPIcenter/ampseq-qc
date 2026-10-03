@@ -224,14 +224,38 @@ amplicon_coverage_with_manifest <- merge_amplicon_coverage(amplicon_coverage_qc,
 summary_samples <- summarise_samples(amplicon_coverage_with_manifest, nloci_table, manifest, params$read_threshold)
 ```
 
+### Sample Summary
+
+Mad4hatter only writes a sample to the allele data when at least one allele remains after DADA2 and post-processing. Samples with no final reads, such as clean negative controls or failed samples, are therefore expected to be missing from the allele data even though they are in the coverage files.
+
 ```{r}
-# Print summary of samples in files
-cat("Sample Summary\n")
-cat(length(unique(manifest$sample_name)), "samples in manifest", "\n")
-cat(length(unique(allele_data$sample_name)), "samples in allele data file", "\n")
-cat(length(unique(allele_data_qc$sample_name)), "samples in filtered allele data file", "\n")
-cat(length(unique(sample_coverage$sample_name)), "samples in manifest and sample coverage file", "\n")
-cat(length(unique(amplicon_coverage_qc$sample_name)), "samples in manifest and amplicon coverage file", "\n")
+sample_counts_by_file(manifest, list(
+  "Sample coverage" = sample_coverage,
+  "Amplicon coverage" = amplicon_coverage,
+  "Allele data" = allele_data,
+  "Allele data (QC targets only)" = allele_data_qc
+)) |>
+  styled_table(col.names = c("File", "Samples", "Samples also in manifest"))
+```
+
+```{r}
+missing_from_alleles <- samples_missing_from_allele_data(manifest, sample_coverage, allele_data)
+
+if (nrow(missing_from_alleles) == 0) {
+  cat("All samples in the manifest are in the allele data.\n")
+} else {
+  cat(nrow(missing_from_alleles), "sample(s) in the manifest are not in the allele data:\n")
+  missing_from_alleles |>
+    count(SampleType, reason, name = "n_samples") |>
+    styled_table(col.names = c("Sample type", "Reason", "Samples"))
+}
+```
+
+```{r}
+if (nrow(missing_from_alleles) > 0) {
+  missing_from_alleles |>
+    styled_table(col.names = c("Sample", "Batch", "Sample type", "Reason"))
+}
 ```
 
 ## Plate Layout
@@ -316,7 +340,7 @@ if (nrow(polyclonal_information) == 0) {
 #### Read Summary per Negative Control
 ::: {.callout-tip collapse="true"}
 ## About this section
-In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged.
+In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged. Reads are the final reads per target after DADA2 and post-processing (`OutputPostprocessing` in the amplicon coverage).
 :::
 
 ```{r}
@@ -398,7 +422,7 @@ head(neg_control_information) |>
 
 ::: {.callout-tip collapse="true"}
 ## About this section
-This plot aggregates the total reads for each target across all negative controls. In negative controls, if there is an unexpected spike in reads for specific targets, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific targets where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
+This plot aggregates the total reads for each target across all negative controls in all batches, using the same final reads as the plots and table above. In negative controls, if there is an unexpected spike in reads for specific targets, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific targets where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
 :::
 
 ```{r}
@@ -474,7 +498,7 @@ qc_counts <- qc_status_counts(reprep_repool_summary)
 percentage_pass <- qc_counts$percentage_pass
 
 if (qc_counts$total > 0) {
-  cat("Overall QC Summary:\n")
+  cat("Overall QC Summary (samples counted once by their worst reaction status):\n")
   cat("  Reprep:", qc_counts$reprep, "\n")
   cat("  Repool:", qc_counts$repool, "\n")
   cat("  Pass:", qc_counts$pass, "\n")
@@ -622,6 +646,8 @@ if (nrow(loci_not_in_allele_data) > 0) {
 ::: {.callout-tip collapse="true"}
 ## About this section
 This visualization shows the overall QC pass rate by batch, with stacked bars representing the percentage of samples passing, requiring repool, or requiring reprep. This helps identify batches with systematic issues.
+
+Each sample is counted once, using its worst status across reactions: a sample needing reprep in any reaction is counted as reprep, otherwise a sample needing repool in any reaction is counted as repool, and only samples passing every reaction are counted as pass. The status of each reaction is given in the repool and reprep output files and the amplification plots.
 :::
 
 ```{r}

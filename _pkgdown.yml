@@ -39,6 +39,7 @@ reference:
       - generate_reprep_repool_table
       - fill_missing_data
       - samples_with_status
+      - sample_qc_status
       - qc_status_counts
       - qc_summary_by_batch
   - title: Controls
@@ -52,6 +53,8 @@ reference:
     contents:
       - filter_allele_table
       - allele_table_group_cols
+      - sample_counts_by_file
+      - samples_missing_from_allele_data
       - missing_samples_report
       - missing_targets_report
   - title: Plots

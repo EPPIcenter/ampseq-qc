@@ -11,7 +11,7 @@ utils::globalVariables(c(
   "chrom", "count", "fwd_primer", "insert_end", "insert_start", "n",
   "n_good_loci", "nreactionloci", "pass", "pass_rate", "percentage", "pool",
   "prop_good_loci", "pseudocigar_masked", "reaction", "reads", "reads_per_reaction",
-  "reads_per_sample", "reason", "repool", "reprep", "rev_primer",
+  "reads_per_sample", "reason", "repool", "reprep", "rev_primer", "severity",
   "samples_with_reads", "status", "sum_reads", "target_length", "target_name",
   "total", "xmax", "xmin", "y", "ymax", "ymin", "negative", "sample_name",
   "stage"

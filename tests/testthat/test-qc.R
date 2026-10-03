@@ -82,6 +82,26 @@ test_that("controls are identified by SampleType, not sample name", {
   expect_equal(by_batch$pass_rate, round(100 / 3, 1))
 })
 
+test_that("QC summaries count each sample once by its worst reaction status", {
+  summary <- tibble::tibble(
+    sample_name = c("a", "a", "b", "b", "c", "c", "d", "d"),
+    Batch = "B1",
+    SampleType = "sample",
+    reaction = rep(c("1", "2"), 4),
+    status = c("pass", "pass", "pass", "reprep", "repool", "pass", "reprep", "reprep")
+  )
+
+  status <- sample_qc_status(summary)
+  expect_equal(status$status[order(status$sample_name)], c("pass", "reprep", "repool", "reprep"))
+
+  counts <- qc_status_counts(summary)
+  expect_equal(c(counts$pass, counts$repool, counts$reprep, counts$total), c(1, 1, 2, 4))
+
+  by_batch <- qc_summary_table(summary)
+  expect_equal(by_batch$total, 4)
+  expect_equal(sum(qc_summary_by_batch(summary)$percentage), 100)
+})
+
 test_that("samples_with_status returns rows for one status", {
   fixture <- qc_fixture()
   summary <- generate_reprep_repool_table(fixture$summary_samples, 0.5, 0.75) |>

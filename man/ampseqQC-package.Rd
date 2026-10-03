@@ -8,6 +8,15 @@
 \description{
 Summarises quality control statistics for targeted amplicon sequencing runs processed with the Mad4hatter pipeline, combining pipeline outputs with a sample manifest. Provides functions to load results, assign targets to multiplex PCR reactions from their pools, classify samples as pass, repool or reprep, summarise positive and negative controls, filter allele tables, and render an HTML QC report.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://eppicenter.github.io/ampseq-qc/}
+  \item \url{https://github.com/EPPIcenter/ampseq-qc}
+  \item Report bugs at \url{https://github.com/EPPIcenter/ampseq-qc/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Kathryn Murie \email{kathryn.murie@ucsf.edu}
 

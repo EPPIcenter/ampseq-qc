@@ -34,6 +34,22 @@ test_that("negative control target summary uses panel positions", {
   expect_true(is.na(summary$samples_with_reads[summary$target_name == "targetE"]))
 })
 
+test_that("negative control target summary uses final reads like the histogram", {
+  amplicons_negative <- data.frame(
+    sample_name = "neg1",
+    target_name = c("targetA", "targetD"),
+    reaction = "1",
+    reads = c(70, 120),
+    OutputPostprocessing = c(60, 0)
+  )
+
+  summary <- summarise_negative_control_targets(amplicons_negative, fixture_panel())
+
+  expect_equal(summary$sum_reads[summary$target_name == "targetA"], 60)
+  expect_equal(summary$sum_reads[summary$target_name == "targetD"], 0)
+  expect_true(is.na(summary$samples_with_reads[summary$target_name == "targetD"]))
+})
+
 test_that("negative control targets over threshold are not duplicated by shared reactions", {
   amplicons_negative <- data.frame(
     sample_name = "neg1", target_name = c("targetD", "targetD"), reaction = c("1", "2"),
@@ -64,5 +80,13 @@ test_that("missing reports list absent samples and targets", {
   results <- read_mad4hatter_results(dir)
 
   expect_equal(missing_samples_report(results$allele_data, manifest)$sample_name, "s3")
+
+  missing <- samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
+  expect_true("s3" %in% missing$sample_name)
+  expect_match(missing$reason[missing$sample_name == "s3"], "^Not in pipeline results")
+
+  counts <- sample_counts_by_file(manifest, list(Alleles = results$allele_data))
+  expect_equal(counts$file, c("Manifest", "Alleles"))
+  expect_equal(counts$samples[1], dplyr::n_distinct(manifest$sample_name))
   expect_false("targetB" %in% missing_targets_report(results$panel_information, results$allele_data)$target_name)
 })

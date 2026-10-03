@@ -23,6 +23,8 @@ One row per reaction and target with \code{sum_reads},
 and \code{Locus_label}.
 }
 \description{
-Targets are ordered by chromosome and insert start from the panel
-information.
+Sums the final reads (\code{OutputPostprocessing}) for each target across all
+negative controls, the same reads used by \code{\link[=plot_negative_control_histogram]{plot_negative_control_histogram()}}
+and \code{\link[=negative_control_targets_over_threshold]{negative_control_targets_over_threshold()}}. Targets are ordered by
+chromosome and insert start from the panel information.
 }

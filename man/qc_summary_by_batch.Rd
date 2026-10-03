@@ -18,5 +18,6 @@ status (excluding controls). \code{qc_summary_table()} returns one row per batch
 with pass, repool and reprep counts and the pass rate.
 }
 \description{
-QC status by batch
+Samples are counted once, by their sample-level status from
+\code{\link[=sample_qc_status]{sample_qc_status()}}.
 }

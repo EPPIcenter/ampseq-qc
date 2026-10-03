@@ -194,33 +194,52 @@ samples_with_status <- function(reprep_repool_summary, qc_status) {
     dplyr::arrange(Batch, sample_name, reaction)
 }
 
+#' Sample-level QC status
+#'
+#' Combines the per-reaction calls into one status per sample, taking the worst
+#' status across reactions (`reprep`, then `repool`, then `pass`). Positive and
+#' negative controls are excluded.
+#'
+#' @param reprep_repool_summary Output of [fill_missing_data()].
+#' @return One row per sample with `sample_name`, `Batch` and `status`.
+#' @export
+sample_qc_status <- function(reprep_repool_summary) {
+  status_levels <- c("pass", "repool", "reprep")
+
+  reprep_repool_summary %>%
+    dplyr::filter(!is_control(SampleType)) %>%
+    dplyr::mutate(severity = match(status, status_levels)) %>%
+    dplyr::group_by(sample_name, Batch) %>%
+    dplyr::summarise(status = status_levels[max(severity)], .groups = "drop")
+}
+
 #' Overall QC counts
 #'
-#' Counts samples (excluding positive and negative controls) with at least one
-#' reaction in each status.
+#' Counts samples (excluding positive and negative controls) by their
+#' sample-level status from [sample_qc_status()], so each sample is counted
+#' once.
 #'
 #' @param reprep_repool_summary Output of [fill_missing_data()].
 #' @return A list with `reprep`, `repool`, `pass`, `total` and
 #'   `percentage_pass` (`NA` if there are no samples).
 #' @export
 qc_status_counts <- function(reprep_repool_summary) {
-  samples <- reprep_repool_summary %>%
-    dplyr::filter(!is_control(SampleType))
-  count_status <- function(qc_status) {
-    dplyr::n_distinct(samples$sample_name[samples$status == qc_status])
-  }
+  samples <- sample_qc_status(reprep_repool_summary)
 
   counts <- list(
-    reprep = count_status("reprep"),
-    repool = count_status("repool"),
-    pass = count_status("pass")
+    reprep = sum(samples$status == "reprep"),
+    repool = sum(samples$status == "repool"),
+    pass = sum(samples$status == "pass")
   )
-  counts$total <- counts$reprep + counts$repool + counts$pass
+  counts$total <- nrow(samples)
   counts$percentage_pass <- if (counts$total > 0) counts$pass / counts$total * 100 else NA_real_
   counts
 }
 
 #' QC status by batch
+#'
+#' Samples are counted once, by their sample-level status from
+#' [sample_qc_status()].
 #'
 #' @param reprep_repool_summary Output of [fill_missing_data()].
 #' @return `qc_summary_by_batch()` returns counts and percentages per batch and
@@ -228,11 +247,8 @@ qc_status_counts <- function(reprep_repool_summary) {
 #'   with pass, repool and reprep counts and the pass rate.
 #' @export
 qc_summary_by_batch <- function(reprep_repool_summary) {
-  reprep_repool_summary %>%
-    dplyr::filter(!is_control(SampleType)) %>%
-    dplyr::distinct(sample_name, Batch, status) %>%
-    dplyr::group_by(Batch, status) %>%
-    dplyr::summarize(count = dplyr::n(), .groups = "drop") %>%
+  sample_qc_status(reprep_repool_summary) %>%
+    dplyr::count(Batch, status, name = "count") %>%
     dplyr::group_by(Batch) %>%
     dplyr::mutate(
       total = sum(count),
@@ -244,11 +260,8 @@ qc_summary_by_batch <- function(reprep_repool_summary) {
 #' @rdname qc_summary_by_batch
 #' @export
 qc_summary_table <- function(reprep_repool_summary) {
-  reprep_repool_summary %>%
-    dplyr::filter(!is_control(SampleType)) %>%
-    dplyr::distinct(sample_name, Batch, status) %>%
-    dplyr::group_by(Batch, status) %>%
-    dplyr::summarize(count = dplyr::n(), .groups = "drop") %>%
+  sample_qc_status(reprep_repool_summary) %>%
+    dplyr::count(Batch, status, name = "count") %>%
     tidyr::complete(Batch, status = c("pass", "repool", "reprep"), fill = list(count = 0)) %>%
     tidyr::pivot_wider(names_from = status, values_from = count, values_fill = 0) %>%
     dplyr::mutate(

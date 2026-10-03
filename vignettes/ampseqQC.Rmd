@@ -179,7 +179,7 @@ qc_calls |>
 
 A few things stand out. Low-parasitemia samples fail in both reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in reaction 2, which points to a problem with the reaction 2 mPCR for those wells rather than with the samples. B2_S20 is in the manifest but has no data, because it was not sequenced.
 
-The overall pass rate by batch excludes controls:
+The overall pass rate by batch excludes controls. Each sample is counted once, by its worst status across reactions, so B2_S05 and B2_S06 count as reprep even though reaction 1 passed:
 
 ```{r, fig.width = 6}
 qc_summary_table(qc_calls)
@@ -232,7 +232,7 @@ negative_control_targets_over_threshold(amplicons_negative, negative_control_rea
 plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2")
 ```
 
-Summing reads per target across negative controls shows which targets are affected. In the report this plot is interactive.
+Summing reads per target across negative controls shows which targets are affected. Like the histogram, this uses the final reads after DADA2 and post-processing (`OutputPostprocessing`). In the report this plot is interactive.
 
 ```{r}
 summarise_negative_control_targets(amplicons_negative, results$panel_information) |>
@@ -252,8 +252,12 @@ allele_data_filtered <- filter_allele_table(
 )
 nrow(results$allele_data)
 nrow(allele_data_filtered)
+```
 
-missing_samples_report(results$allele_data, manifest)
+Mad4hatter only writes samples with at least one final allele to the allele table, so clean negative controls are missing from it as well as samples that were not sequenced:
+
+```{r}
+samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
 ```
 
 ## Using your own data

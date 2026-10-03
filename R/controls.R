@@ -95,8 +95,10 @@ negative_control_targets_over_threshold <- function(amplicons_negative, negative
 
 #' Total reads per target across negative controls
 #'
-#' Targets are ordered by chromosome and insert start from the panel
-#' information.
+#' Sums the final reads (`OutputPostprocessing`) for each target across all
+#' negative controls, the same reads used by [plot_negative_control_histogram()]
+#' and [negative_control_targets_over_threshold()]. Targets are ordered by
+#' chromosome and insert start from the panel information.
 #'
 #' @param amplicons_negative Output of [negative_control_amplicons()].
 #' @param panel_information Panel information from Mad4hatter.
@@ -111,13 +113,13 @@ summarise_negative_control_targets <- function(amplicons_negative, panel_informa
     dplyr::distinct(target_name, Chromosome = chrom, Start = insert_start)
 
   samples_with_reads <- amplicons_negative %>%
-    dplyr::filter(reads > 0) %>%
+    dplyr::filter(OutputPostprocessing > 0) %>%
     dplyr::group_by(target_name) %>%
     dplyr::summarise(samples_with_reads = paste(unique(sample_name), collapse = ", "), .groups = "drop")
 
   summary_data <- amplicons_negative %>%
     dplyr::group_by(reaction, target_name) %>%
-    dplyr::summarise(sum_reads = sum(reads, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::summarise(sum_reads = sum(OutputPostprocessing, na.rm = TRUE), .groups = "drop") %>%
     dplyr::left_join(target_positions, by = "target_name") %>%
     dplyr::left_join(samples_with_reads, by = "target_name")
 

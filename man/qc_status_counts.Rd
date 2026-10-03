@@ -14,6 +14,7 @@ A list with \code{reprep}, \code{repool}, \code{pass}, \code{total} and
 \code{percentage_pass} (\code{NA} if there are no samples).
 }
 \description{
-Counts samples (excluding positive and negative controls) with at least one
-reaction in each status.
+Counts samples (excluding positive and negative controls) by their
+sample-level status from \code{\link[=sample_qc_status]{sample_qc_status()}}, so each sample is counted
+once.
 }
