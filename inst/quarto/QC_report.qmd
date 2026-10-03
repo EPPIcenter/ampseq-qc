@@ -1,0 +1,688 @@
+---
+title: "QC Report"
+author: ""
+format:
+  html:
+    code-fold: true
+    embed-resources: true
+    toc: true
+execute:
+  echo: false
+params:
+  # Path to results directory from Mad4hatter pipeline
+  results_dir: "PATH/TO/MAD4HATTER_RESULTS_DIR/"
+  # Path to manifest
+  manifest_file: "PATH/TO/MANIFEST"
+  # Directory for output tables; empty writes to the working directory
+  output_dir: ""
+  # RDS file of ampseqQC::panel_settings(); empty uses ampseqQC::default_panel_settings()
+  panel_settings_file: ""
+  # Running mode - if running interactively, for example in Rstudio, set this to false
+  render_mode: true
+  # If true, trims extra sequencing-related information from sample_name to match the manifest format
+  standardise_sample_name: true
+  # Threshold for the reads needed to classify a target as having amplified successfully
+  read_threshold: 100
+  # Minimum Reads per ASV used as a filter for the positive control plot
+  read_filter: 0
+  # Minimum Allele Frequency per ASV used as a filter for positive control plot
+  af_filter: 0.01
+  # Read threshold to output target information for negative control
+  negative_control_read_threshold: 50
+  # Proportion of targets successfully amplified; samples below this threshold require re-prep
+  reprep_threshold: 0.5
+  # Proportion of targets successfully amplified; samples below this threshold require re-pool
+  repool_threshold: 0.75
+  # Allele ID column, either asv or pseudocigar_masked. If pseudocigar_masked, alleles are collapsed to unique pseudocigar_masked.
+  allele_col: "pseudocigar_masked"
+  # Threshold length (including primers) to flag a target as being long. These targets are filtered from performance metrics as they are known to have a lower performance
+  long_target_threshold: 275
+  # If true, af_filter will be applied to final output allele tables. If false, only read_filter will be applied
+  filter_wsaf_final_allele_table: true
+---
+
+
+
+This interactive notebook generates a summary of QC statistics to assess the success of a **Mad4hatter** run. 
+
+::: {.callout-note collapse="true"}
+## Required Inputs 
+
+To proceed, you must provide the **results directory** from the Mad4hatter pipeline, which should include the following files:
+
+* **sample_coverage.txt**
+* **amplicon_coverage.txt**
+* **allele_data.txt**
+* **panel_information/amplicon_info.tsv**
+
+If present, **allele_data_collapsed.txt** and the **resistance_marker_module** tables are also filtered and written out.
+
+Additionally, a **sample manifest** is required. This file must contain the following fields:
+
+* **sample_name** – Unique identifier for each sample.
+* **SampleType** – Specifies whether the entry is a **sample**, **positive** control, or **negative** control.
+* **Batch** – Identifies a group of samples processed simultaneously by the same individual.
+* **Column** – The well column where the sample was placed in the plate.
+* **Row** – The well row where the sample was placed in the plate.
+* **Parasitemia** – The qPCR value for the sample.
+:::
+
+::: {.callout-note collapse="true"}
+## QC Summaries
+The notebook provides the following analyses:
+
+* **Plate Layout**: Location of samples and controls on the plate
+* **Primer Dimer Content**: Input reads vs. % attributed to primer dimers 
+* **Balancing Across Batches**: Swarm plot of reads output by the pipeline by batch
+* **Control Summary**, including:  
+    * Polyclonality of Positive Controls
+    * Read Summary for Negative Controls
+    * Contamination Maps for Negative Controls
+* **Successul Amplification** summary, including:
+    * Sample Reads vs. Number of Successfully Amplified Targets
+    * Parasitemia vs. Number of Successfully Amplified Targets
+* **Amplification Plate Maps**, including:
+    * Reads Heatmap
+    * Successful Amplification Heatmap
+* **QC Summary by Batch**, including:
+    * Proportion of samples for each status of QC (Pass, Repool, or Reprep) 
+      
+Note: A target is considered successfully amplified if it has more than `read_threshold` reads, where `read_threshold` is a report parameter.
+:::
+
+
+## Setup
+
+::: {.callout-note collapse="true"}
+### Configuration and Data Loading
+
+```{r}
+library(ampseqQC)
+library(dplyr, warn.conflicts = FALSE)
+```
+
+```{r}
+# Path to outputs
+output_path <- function(file) {
+  if (nzchar(params$output_dir)) file.path(params$output_dir, file) else file
+}
+reprep_repool_summary_path <- output_path("reprep_repool_summary.csv")
+polyclonal_information_path <- output_path("positive_control_polyclonal_info.csv")
+neg_control_information_path <- output_path("negative_control_amplified_targets.csv")
+filtered_allele_data_path <- output_path("allele_data_filtered.txt")
+filtered_collapsed_allele_data_path <- output_path("allele_data_collapsed_filtered.txt")
+missing_targets_report_path <- output_path("missing_targets_report.csv")
+samples_to_repool_path <- output_path("samples_to_repool.csv")
+samples_to_reprep_path <- output_path("samples_to_reprep.csv")
+missing_samples_report_path <- output_path("missing_samples_report.csv")
+filtered_resmarker_table_path <- output_path("resmarker_table_filtered.txt")
+filtered_resmarker_microhaplotype_table_path <- output_path("resmarker_microhaplotype_table_filtered.txt")
+```
+
+```{r}
+panel <- if (nzchar(params$panel_settings_file)) readRDS(params$panel_settings_file) else default_panel_settings()
+```
+
+```{r}
+# Print summary of user inputs
+cat("============================================\n")
+cat("USER CONFIGURATION SUMMARY\n")
+cat("============================================\n")
+cat("Results Directory:", params$results_dir, "\n")
+cat("Manifest File:", params$manifest_file, "\n")
+cat("Read Threshold for Successful Amplification:", params$read_threshold, "\n")
+cat("Minimum Reads per ASV (Positive Control Filter):", params$read_filter, "\n")
+cat("Minimum Allele Frequency per ASV (Positive Control Filter):", params$af_filter, "\n")
+cat("Allele Column:", params$allele_col, "\n")
+cat("============================================\n")
+```
+
+```{r}
+manifest <- read_manifest(params$manifest_file)
+results <- read_mad4hatter_results(params$results_dir, params$standardise_sample_name)
+
+sample_coverage <- results$sample_coverage
+amplicon_coverage <- results$amplicon_coverage
+allele_data <- results$allele_data
+panel_information <- results$panel_information
+```
+
+:::
+
+::: {.callout-note collapse="true"}
+### Section A: Locus Filtering
+
+Here we filter out two types of targets for QC calculations only:
+
+* **Targets listed in the panel settings**, by default the species identification targets, which are expected to amplify only if the species is present.
+
+* **Long amplicons (>long_target_threshold bp, including primers)**, which tend to underperform due to their length.
+
+These targets should not be considered when assessing the success of a sequencing run, but will still be included in the final allele_data output.
+
+```{r}
+excluded <- qc_excluded_targets(panel_information, panel, params$long_target_threshold)
+excluded_loci <- excluded$excluded
+
+cat("Long targets being removed:\n")
+cat(excluded$long, sep = "\n")
+```
+
+```{r}
+amplicon_coverage_qc <- amplicon_coverage[!amplicon_coverage$target_name %in% excluded_loci, ]
+allele_data_qc <- allele_data[!allele_data$target_name %in% excluded_loci, ]
+```
+
+```{r}
+cat("\nTarget count summary:\n")
+cat("  Total targets in amplicon_coverage:", n_distinct(amplicon_coverage$target_name), "\n")
+cat("  Targets used for QC (after filtering):", n_distinct(amplicon_coverage_qc$target_name), "\n")
+cat("  Excluded targets will still appear in final allele_data_filtered.txt output\n")
+```
+
+:::
+
+::: {.callout-note collapse="true"}
+### Section B: Pool Detection & Reaction Assignment
+
+Pools are read from the panel information in the results directory and assigned to mPCR reactions using the panel settings. Targets shared by pools in different reactions are counted in each reaction.
+
+```{r}
+panel_reactions <- assign_reactions(panel_information, panel) |>
+  filter(!target_name %in% excluded_loci)
+
+summarise_pools(panel_information, panel) |>
+  styled_table()
+```
+
+```{r}
+# Count loci per reaction (only including loci that were not filtered above)
+nloci_table <- count_targets_per_reaction(panel_reactions)
+nloci_table |>
+  styled_table()
+
+shared_targets <- panel_reactions |>
+  count(target_name) |>
+  filter(n > 1) |>
+  pull(target_name)
+if (length(shared_targets) > 0) {
+  cat(length(shared_targets), "target(s) are in pools from more than one reaction and are counted in each:\n")
+  cat(shared_targets, sep = "\n")
+}
+```
+
+:::
+
+```{r}
+# Reformat sample_coverage and add sample information from manifest 
+sample_coverage_with_manifest <- merge_sample_coverage(sample_coverage, manifest)
+
+# Add manifest and reactions to amplicon coverage
+amplicon_coverage_with_manifest <- merge_amplicon_coverage(amplicon_coverage_qc, manifest, panel_reactions)
+
+# Create sample summary stats 
+summary_samples <- summarise_samples(amplicon_coverage_with_manifest, nloci_table, manifest, params$read_threshold)
+```
+
+### Sample Summary
+
+Mad4hatter only writes a sample to the allele data when at least one allele remains after DADA2 and post-processing. Samples with no final reads, such as clean negative controls or failed samples, are therefore expected to be missing from the allele data even though they are in the coverage files.
+
+```{r}
+sample_counts_by_file(manifest, list(
+  "Sample coverage" = sample_coverage,
+  "Amplicon coverage" = amplicon_coverage,
+  "Allele data" = allele_data,
+  "Allele data (QC targets only)" = allele_data_qc
+)) |>
+  styled_table(col.names = c("File", "Samples", "Samples also in manifest"))
+```
+
+```{r}
+missing_from_alleles <- samples_missing_from_allele_data(manifest, sample_coverage, allele_data)
+
+if (nrow(missing_from_alleles) == 0) {
+  cat("All samples in the manifest are in the allele data.\n")
+} else {
+  cat(nrow(missing_from_alleles), "sample(s) in the manifest are not in the allele data:\n")
+  missing_from_alleles |>
+    count(SampleType, reason, name = "n_samples") |>
+    styled_table(col.names = c("Sample type", "Reason", "Samples"))
+}
+```
+
+```{r}
+if (nrow(missing_from_alleles) > 0) {
+  missing_from_alleles |>
+    styled_table(col.names = c("Sample", "Batch", "Sample type", "Reason"))
+}
+```
+
+## Plate Layout
+
+::: {.callout-tip collapse="true"}
+## About this section
+The plate layout provides a visual representation of sample organization, including the placement of positive and negative controls. This is allows verification that controls are positioned correctly to validate assay performance with later plots.
+:::
+
+```{r}
+quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch))
+```
+
+```{r}
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_layouts(quadrants)
+if (params$render_mode) {
+  create_tabset(plate_maps)
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
+```
+
+## Primer Dimer Content
+
+::: {.callout-tip collapse="true"}
+## About this section
+Here we visualise the proportion of sequencing reads that are classified as primer dimers, which occur when primers anneal to each other instead of the target DNA. This plot is useful for assessing the efficiency of the amplification process, as high primer dimer levels can indicate suboptimal reaction conditions, reduced sequencing efficiency, and potential issues with sample quality or reagent performance.
+:::
+
+```{r}
+generate_dimer_plot(sample_coverage_with_manifest)
+```
+
+## Balancing Across Batches
+
+::: {.callout-tip collapse="true"}
+## About this section
+Here we show the distribution of total reads per sample across different batches, helping to assess whether sequencing depth is consistent. This plot is useful when you have multiple batches in the same sequencing run to identify imbalances in sequencing, which can arise due to variations in library preparation, loading efficiency, or sequencing conditions.
+:::
+
+```{r}
+generate_balancing_plot(summary_samples)
+```
+
+## Control Summary
+
+### Multiallelic Targets in Positive Controls
+
+::: {.callout-tip collapse="true"}
+## About this section
+Here we inspect the positive controls, ensuring that the positive controls perform as expected without contamination or unwanted diversity. For example, if the control you included was monoclonal you would expect little to no targets reported as having more than one allele (multiallelic). In some cases you may allow for some level of false positive detection within a monoclonal control. Note that WSAF and total reads per allele filters (as set by default or modified by user) are applied.
+:::
+
+```{r}
+allele_data_qc <- add_allele_frequency(allele_data_qc)
+positive_controls <- summarise_positive_controls(
+  allele_data_qc, manifest, params$allele_col, params$read_filter, params$af_filter
+)
+
+plot_positive_control_alleles(positive_controls$category_counts) |>
+  interactive_plot(width = 800, height = 500)
+```
+
+```{r}
+polyclonal_information <- positive_controls$polyclonal_information
+
+if (nrow(polyclonal_information) == 0) {
+  cat("No multiallelic targets found for positive controls.\n")
+} else {
+  head(polyclonal_information) |>
+    styled_table()
+}
+```
+
+### Negative Control Contamination 
+
+#### Read Summary per Negative Control
+::: {.callout-tip collapse="true"}
+## About this section
+In an ideal scenario, negative controls should have minimal or no amplification. If a negative control shows a high number of targets amplified with significant reads, it suggests potential contamination. By plotting the number of reads against the number of targets for each sample, any outliers or unexpected amplification in negative controls can be easily flagged. Reads are the final reads per target after DADA2 and post-processing (`OutputPostprocessing` in the amplicon coverage).
+:::
+
+```{r}
+amplicons_negative <- negative_control_amplicons(amplicon_coverage_with_manifest)
+```
+
+```{r}
+# Get negative controls grouped by batch
+batches_with_negatives <- amplicons_negative %>%
+  group_by(Batch) %>%
+  summarize(n_controls = n_distinct(negative), .groups = "drop") %>%
+  arrange(Batch)
+
+cat("Negative controls by batch:\n")
+batches_with_negatives |>
+  styled_table()
+
+n_batches <- nrow(batches_with_negatives)
+cat("Total batches with negative controls:", n_batches, "\n")
+
+n_batches_with_reads <- amplicons_negative %>%
+  filter(OutputPostprocessing != 0) %>%
+  distinct(Batch) %>%
+  nrow()
+cat("Total batches with negative controls that had reads:", n_batches_with_reads, "\n")
+```
+
+```{r}
+#| results: asis
+#| echo: false
+base_width <- 12
+
+plot_negative_batch <- function(batch_data, batch_name = NULL) {
+  total_negatives <- n_distinct(batch_data$negative)
+  batch_data_nonzero <- batch_data %>%
+    filter(!is.na(OutputPostprocessing) & OutputPostprocessing > 0)
+  plotted_negatives <- n_distinct(batch_data_nonzero$negative)
+
+  if (nrow(batch_data_nonzero) == 0) {
+    cat("No reads present in any negative controls in this batch — nothing to plot.\n\n")
+    return(invisible(NULL))
+  }
+
+  cat(sprintf(
+    "Plotting reads for %d/%d negative controls (%d had no reads)\n\n",
+    plotted_negatives, total_negatives, total_negatives - plotted_negatives
+  ))
+  p <- plot_negative_control_histogram(batch_data_nonzero, batch_name = batch_name)
+  print_sized_plot(p, base_width, negative_control_plot_height(plotted_negatives))
+}
+
+if (n_batches == 0) {
+  cat("No negative controls in the manifest.\n")
+} else if (n_batches == 1) {
+  plot_negative_batch(amplicons_negative)
+} else {
+  cat("\n\n::: {.panel-tabset}\n\n")
+  for (batch in unique(amplicons_negative$Batch)) {
+    cat("## ", batch, "\n\n")
+    plot_negative_batch(amplicons_negative %>% filter(Batch == batch), batch)
+    cat("\n\n")
+  }
+  cat(":::\n\n")
+}
+```
+
+```{r}
+cat("Summary of negative control targets with reads above threshold (", params$negative_control_read_threshold, ") \n")
+neg_control_information <- negative_control_targets_over_threshold(amplicons_negative, params$negative_control_read_threshold)
+
+if (nrow(neg_control_information) == 0) {
+  cat("No negative controls had targets with reads over threshold.\n")
+}
+head(neg_control_information) |>
+  styled_table()
+```
+
+#### Aggregated Reads per Target
+
+::: {.callout-tip collapse="true"}
+## About this section
+This plot aggregates the total reads for each target across all negative controls in all batches, using the same final reads as the plots and table above. In negative controls, if there is an unexpected spike in reads for specific targets, it could indicate contamination in the form of cross-sample contamination or environmental contamination. Analyzing these total summed reads helps pinpoint specific targets where contamination might have occurred, offering insights into which steps in the process might have introduced contaminants.
+:::
+
+```{r}
+if (nrow(amplicons_negative) == 0) {
+  cat("No negative controls in the manifest.\n")
+} else {
+  summarise_negative_control_targets(amplicons_negative, panel_information) |>
+    plot_negative_control_target_reads() |>
+    interactive_plot()
+}
+```
+
+## Successul Amplification
+
+### Parasitemia vs. Number of Successfully Amplified Targets
+::: {.callout-tip collapse="true"}
+## About this section
+This plot examines the relationship between a sample's parasitemia (qPCR-determined parasite load) and the number of targets that successfully amplified. This plot helps assess whether lower parasitemia samples struggle with amplification, which can indicate potential limitations in sensitivity.
+:::
+
+```{r}
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plots <- generate_parasitemia_by_amplification_success_plots(summary_samples, params$read_threshold)
+if (params$render_mode) {
+  create_tabset(plots)
+} else {
+  for (plot in plots) {
+    print(plot)
+  }
+}
+```
+
+### Sample Reads vs. Number of Successfully Amplified Targets
+
+::: {.callout-tip collapse="true"}
+## About this section
+This illustrates the relationship between the total number of reads per sample and the number of targets that passed the amplification threshold for that sample. This plot helps evaluate whether samples with higher read counts achieve better amplification success and can reveal potential issues such as insufficient sequencing depth or inefficient amplification. Ideally, a positive correlation should be observed, where higher read counts result in more successfully amplified targets.
+:::
+
+```{r}
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+read_plots <- generate_reads_by_amplification_success_plots(
+  summary_samples, params$read_threshold,
+  reprep_threshold = params$reprep_threshold, repool_threshold = params$repool_threshold
+)
+if (params$render_mode) {
+  create_tabset(read_plots)
+} else {
+  for (plot in read_plots) {
+    print(plot)
+  }
+}
+```
+
+::: {.callout-note collapse="true"}
+## Per Sample QC Outcome Summary
+
+```{r}
+#| scrolled: true
+reprep_repool_summary <- generate_reprep_repool_table(summary_samples, params$reprep_threshold, params$repool_threshold)
+reprep_repool_summary <- fill_missing_data(reprep_repool_summary, manifest)
+reprep_repool_summary %>%
+  filter(status != "pass") |>
+  styled_table()
+```
+
+```{r}
+qc_counts <- qc_status_counts(reprep_repool_summary)
+percentage_pass <- qc_counts$percentage_pass
+
+if (qc_counts$total > 0) {
+  cat("Overall QC Summary (samples counted once by their worst reaction status):\n")
+  cat("  Reprep:", qc_counts$reprep, "\n")
+  cat("  Repool:", qc_counts$repool, "\n")
+  cat("  Pass:", qc_counts$pass, "\n")
+  cat("  Pass percentage:", round(percentage_pass, 1), "%\n")
+}
+```
+
+:::
+
+## Amplification Plate Maps
+
+### Reads Heatmap
+
+::: {.callout-tip collapse="true"}
+## About this section
+The reads heatmap provides a visual representation of read distribution across the plate, helping to identify inconsistencies in sequencing efficiency. This can highlight potential issues such as edge effects, batch effects, or pipetting errors that may impact data quality and interpretation.
+:::
+
+```{r}
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_heat_maps(
+  summary_samples, quadrants,
+  fill_param = "log10(reads_per_reaction + 0.1)", scale_midpoint = 2, scale_label = "log10(reads_per_reaction)"
+)
+if (params$render_mode) {
+  create_tabset(plate_maps)
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
+```
+
+### Successful Amplification Heatmap
+::: {.callout-tip collapse="true"}
+## About this section
+Here we visualise the success rate of amplification across the plate, allowing for the identification of poorly amplified regions or wells. This is useful for assessing the quality of the PCR process, ensuring that targets across all samples are adequately amplified, and helping to spot potential issues with specific wells or sample groups.
+:::
+
+```{r}
+#| results: asis
+#| echo: false
+#| fig-column: screen-inset
+plate_maps <- plot_plate_heat_maps(
+  summary_samples, quadrants,
+  fill_param = "prop_good_loci", scale_midpoint = 0.5, scale_label = "prop_good_loci"
+)
+if (params$render_mode) {
+  create_tabset(plate_maps)
+} else {
+  for (plate in plate_maps) {
+    print(plate)
+  }
+}
+```
+
+## Save Output Files
+
+```{r}
+if (nzchar(params$output_dir) && !dir.exists(params$output_dir)) {
+  dir.create(params$output_dir, recursive = TRUE)
+  cat("Created output directory:", params$output_dir, "\n")
+}
+
+write.csv(reprep_repool_summary, reprep_repool_summary_path, row.names = FALSE)
+cat("Saved:", reprep_repool_summary_path, "\n")
+
+write.csv(polyclonal_information, polyclonal_information_path, row.names = FALSE)
+cat("Saved:", polyclonal_information_path, "\n")
+
+write.csv(neg_control_information, neg_control_information_path, row.names = FALSE)
+cat("Saved:", neg_control_information_path, "\n")
+
+samples_to_repool <- samples_with_status(reprep_repool_summary, "repool")
+samples_to_reprep <- samples_with_status(reprep_repool_summary, "reprep")
+
+write.csv(samples_to_repool, samples_to_repool_path, row.names = FALSE)
+cat("Saved:", samples_to_repool_path, "(", nrow(samples_to_repool), "samples needing repool)\n")
+
+write.csv(samples_to_reprep, samples_to_reprep_path, row.names = FALSE)
+cat("Saved:", samples_to_reprep_path, "(", nrow(samples_to_reprep), "samples needing reprep)\n")
+
+missing_samples <- missing_samples_report(allele_data, manifest)
+write.csv(missing_samples, missing_samples_report_path, row.names = FALSE)
+cat("Saved:", missing_samples_report_path, "(", nrow(missing_samples), "samples in manifest not found in allele data)\n")
+
+# Filter the unfiltered pipeline tables to minimum reads and (if enabled) within sample allele frequency
+filter_msg <- if (params$filter_wsaf_final_allele_table) {
+  paste0("Reads > ", params$read_filter, " AND WSAF > ", params$af_filter)
+} else {
+  paste0("Reads > ", params$read_filter, " (WSAF filter disabled)")
+}
+output_tables <- c(
+  allele_data = filtered_allele_data_path,
+  collapsed_allele_data = filtered_collapsed_allele_data_path,
+  resmarker_table = filtered_resmarker_table_path,
+  resmarker_microhaplotype_table = filtered_resmarker_microhaplotype_table_path
+)
+group_cols <- allele_table_group_cols()
+for (table_name in names(output_tables)) {
+  if (is.null(results[[table_name]])) {
+    cat("Skipped:", output_tables[[table_name]], "(input not found in results directory)\n")
+    next
+  }
+  filtered <- filter_allele_table(
+    results[[table_name]], group_cols[[table_name]],
+    params$read_filter, params$af_filter, params$filter_wsaf_final_allele_table
+  )
+  write.table(filtered, output_tables[[table_name]], sep = "\t", row.names = FALSE, quote = FALSE)
+  cat("Saved:", output_tables[[table_name]], "\n")
+}
+cat("  (Includes ALL targets, including those excluded from QC calculations)\n")
+cat("  Filtered by:", filter_msg, "\n")
+```
+
+::: {.callout-note collapse="true"}
+### Missing loci report 
+
+```{r}
+loci_not_in_allele_data <- missing_targets_report(panel_information, allele_data)
+
+write.csv(loci_not_in_allele_data, missing_targets_report_path, row.names = FALSE)
+cat("Saved:", missing_targets_report_path, "\n")
+
+if (nrow(loci_not_in_allele_data) > 0) {
+  cat("\nMissing Targets Report\n\n")
+  cat("The following targets are present in the pool file but missing from the allele data:\n\n")
+
+  loci_not_in_allele_data %>%
+    arrange(target_name) %>%
+    mutate(No = row_number()) %>%
+    select(No, everything()) |>
+    styled_table()
+} else {
+  cat("\nAll targets in pool file were found in the data.\n")
+}
+```
+
+:::
+
+## QC Summary by Batch
+
+::: {.callout-tip collapse="true"}
+## About this section
+This visualization shows the overall QC pass rate by batch, with stacked bars representing the percentage of samples passing, requiring repool, or requiring reprep. This helps identify batches with systematic issues.
+
+Each sample is counted once, using its worst status across reactions: a sample needing reprep in any reaction is counted as reprep, otherwise a sample needing repool in any reaction is counted as repool, and only samples passing every reaction are counted as pass. The status of each reaction is given in the repool and reprep output files and the amplification plots.
+:::
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+qc_summary_by_batch(reprep_repool_summary) |>
+  plot_qc_status_by_batch()
+```
+
+```{r}
+qc_summary_table(reprep_repool_summary) |>
+  styled_table(col.names = c("Batch", "Pass", "Repool", "Reprep", "Total", "Pass Rate (%)"))
+```
+
+## Summary
+
+::: {.callout-important collapse="false"}
+## Report Summary
+
+This unified QC report has processed data and generated the following standardized outputs:
+
+1. **`r reprep_repool_summary_path`** - Combined reprep/repool classification for all samples
+2. **`r samples_to_repool_path`** - Samples requiring repool
+3. **`r samples_to_reprep_path`** - Samples requiring reprep
+4. **`r polyclonal_information_path`** - Polyclonality information for positive controls
+5. **`r neg_control_information_path`** - Contamination detected in negative controls
+6. **`r filtered_allele_data_path`** - Filtered allele data meeting read/AF thresholds (includes all targets)
+7. **`r missing_targets_report_path`** - Targets in pool file but absent from data (if applicable)
+8. **`r missing_samples_report_path`** - Samples in manifest but not found in allele data
+
+### Key Points
+
+- **Targets filtered for QC**: `r length(excluded_loci)` targets were excluded from QC calculations
+- **QC metrics**: Reprep/repool classifications based on `r n_distinct(amplicon_coverage_qc$target_name)` QC-relevant targets
+- **Final output**: `allele_data_filtered.txt` includes ALL targets (both QC and excluded) meeting thresholds
+- **Pass rate**: `r if (!is.na(percentage_pass)) paste0(round(percentage_pass, 1), "%") else "N/A"`
+:::
+

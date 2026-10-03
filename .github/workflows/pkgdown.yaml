@@ -1,0 +1,134 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+#
+# Pushes to main deploy the site to the root of GitHub Pages. Pull requests
+# from this repository deploy a preview to preview/pr-<number>/, which is
+# removed when the pull request is closed.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+name: pkgdown.yaml
+
+permissions: read-all
+
+env:
+  SITE_URL: https://eppicenter.github.io/ampseq-qc/
+
+jobs:
+  pkgdown:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pkgdown-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      PREVIEW_DIR: ${{ github.event_name == 'pull_request' && format('preview/pr-{0}', github.event.pull_request.number) || '' }}
+      CAN_DEPLOY: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Build site
+        run: |
+          preview_dir <- Sys.getenv("PREVIEW_DIR")
+          override <- if (nzchar(preview_dir)) list(url = paste0(Sys.getenv("SITE_URL"), preview_dir)) else list()
+          pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE, override = override)
+        shell: Rscript {0}
+
+      - name: Render example QC report
+        run: |
+          tutorial <- system.file("extdata", "tutorial", package = "ampseqQC")
+          ampseqQC::render_qc_report(
+            results_dir = file.path(tutorial, "results"),
+            manifest_file = file.path(tutorial, "manifest.csv"),
+            output_dir = "docs/example-report"
+          )
+        shell: Rscript {0}
+
+      - name: Deploy to GitHub pages 🚀
+        if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
+        with:
+          clean: true
+          clean-exclude: preview
+          branch: gh-pages
+          folder: docs
+
+      # Keeps GitHub Pages from running Jekyll before the main site has been deployed
+      - name: Add .nojekyll to GitHub pages root
+        if: github.event_name == 'pull_request' && env.CAN_DEPLOY == 'true'
+        run: mkdir -p pages-root && touch pages-root/.nojekyll
+
+      - name: Deploy .nojekyll to GitHub pages
+        if: github.event_name == 'pull_request' && env.CAN_DEPLOY == 'true'
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
+        with:
+          clean: false
+          branch: gh-pages
+          folder: pages-root
+
+      - name: Deploy preview to GitHub pages
+        if: github.event_name == 'pull_request' && env.CAN_DEPLOY == 'true'
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
+        with:
+          clean: true
+          branch: gh-pages
+          folder: docs
+          target-folder: ${{ env.PREVIEW_DIR }}
+
+      - name: Comment preview link
+        if: github.event_name == 'pull_request' && env.CAN_DEPLOY == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pkgdown-preview
+          message: |
+            📖 Documentation preview for ${{ github.event.pull_request.head.sha }}:
+
+            * Site: ${{ env.SITE_URL }}${{ env.PREVIEW_DIR }}/
+            * Tutorial: ${{ env.SITE_URL }}${{ env.PREVIEW_DIR }}/articles/ampseqQC.html
+            * Example report: ${{ env.SITE_URL }}${{ env.PREVIEW_DIR }}/example-report/QC_report.html
+
+            GitHub Pages can take a minute or two to update.
+
+  remove-preview:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pkgdown-${{ github.event.pull_request.number }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Remove preview
+        run: |
+          preview_dir="preview/pr-${{ github.event.pull_request.number }}"
+          if [ -d "$preview_dir" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git rm -r --quiet "$preview_dir"
+            git commit -m "Remove documentation preview for PR #${{ github.event.pull_request.number }}"
+            git push
+          fi

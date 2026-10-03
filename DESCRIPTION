@@ -1,9 +1,40 @@
-Package: ampseq-qc
+Package: ampseqQC
 Type: Package
-Title: QC Summary Shiny App
+Title: Quality Control Reports for Mad4hatter Amplicon Sequencing Runs
 Version: 0.1.0
-Author: EPPIcenter
-Maintainer: kathryn.murie@ucsf.edu
-Description: A Shiny app for visualizing QC summary data from ampseq data
-Depends: R (>= 3.5.0), shiny, shinyFiles, ggplot2, dplyr, tidyr, ggbeeswarm, stringr
-License: MIT
+Authors@R: c(
+    person("Kathryn", "Murie", email = "kathryn.murie@ucsf.edu", role = c("aut", "cre")),
+    person("EPPIcenter", role = "cph")
+    )
+Description: Summarises quality control statistics for targeted amplicon
+    sequencing runs processed with the Mad4hatter pipeline, combining pipeline
+    outputs with a sample manifest. Provides functions to load results, assign
+    targets to multiplex PCR reactions from their pools, classify samples as
+    pass, repool or reprep, summarise positive and negative controls, filter
+    allele tables, and render an HTML QC report.
+License: GPL-3
+URL: https://eppicenter.github.io/ampseq-qc/, https://github.com/EPPIcenter/ampseq-qc
+BugReports: https://github.com/EPPIcenter/ampseq-qc/issues
+Encoding: UTF-8
+Depends:
+    R (>= 4.1.0)
+Imports:
+    dplyr (>= 1.1.0),
+    ggbeeswarm,
+    ggplot2,
+    kableExtra,
+    knitr,
+    plotly,
+    purrr,
+    rlang,
+    stringr,
+    tibble,
+    tidyr
+Suggests:
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3

@@ -1,0 +1,275 @@
+---
+title: "Getting started: QC of a Mad4hatter run"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started: QC of a Mad4hatter run}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5,
+  out.width = "100%"
+)
+```
+
+This tutorial runs the QC on an example Mad4hatter run from start to finish. The first section shows how to produce the full HTML report in one step; the rest walks through each part of the QC with the package functions, so you can see what the report is doing and reuse the steps in your own analyses.
+
+## The example run
+
+The package includes a simulated run of the MAD4HatTeR panel, run with Mad4hatter's `--pools D1,R1,R2`. D1 and R1 were amplified in one mPCR reaction and R2 in a second. The run has two batches, each on its own 96-well plate with 2 positive controls (3D7) and 2 negative controls. Batch1 fills the plate with 92 samples; Batch2 has 84 samples and column 12 left empty. The data is simulated from the real MAD4HatTeR panel information, so target names, pools and target lengths match a real run.
+
+```{r setup}
+library(ampseqQC)
+library(dplyr, warn.conflicts = FALSE)
+
+tutorial_dir <- system.file("extdata", "tutorial", package = "ampseqQC")
+results_dir <- file.path(tutorial_dir, "results")
+manifest_file <- file.path(tutorial_dir, "manifest.csv")
+
+list.files(results_dir, recursive = TRUE)
+```
+
+The manifest describes each well:
+
+```{r}
+manifest <- read_manifest(manifest_file)
+head(manifest)
+count(manifest, Batch, SampleType)
+```
+
+## Rendering the full report
+
+`render_qc_report()` runs every step below and writes an HTML report plus the QC output tables to `output_dir`. It needs the [Quarto CLI](https://quarto.org/docs/get-started/).
+
+```{r, eval = FALSE}
+render_qc_report(
+  results_dir = results_dir,
+  manifest_file = manifest_file,
+  output_dir = "qc_output"
+)
+```
+
+**[View the report for this example run](../example-report/QC_report.html)**.
+
+The output directory contains:
+
+| File | Contents |
+| ---- | -------- |
+| `QC_report.html` | The QC report |
+| `reprep_repool_summary.csv` | Pass/repool/reprep call for every sample and reaction |
+| `samples_to_repool.csv`, `samples_to_reprep.csv` | Samples needing repool or reprep |
+| `positive_control_polyclonal_info.csv` | Alleles at multiallelic targets in positive controls |
+| `negative_control_amplified_targets.csv` | Negative control targets above the read threshold |
+| `missing_samples_report.csv` | Samples in the manifest with no allele data |
+| `missing_targets_report.csv` | Panel targets with no allele data |
+| `allele_data_filtered.txt` | Allele table filtered by reads and within-sample allele frequency |
+
+The collapsed allele table and the resistance marker tables are also filtered when they are in the results directory.
+
+## Step by step
+
+### Loading the results
+
+`read_mad4hatter_results()` reads the pipeline outputs and trims the sequencing information from sample names (for example `B1_S01_S1_L001` becomes `B1_S01`) so they match the manifest.
+
+```{r}
+results <- read_mad4hatter_results(results_dir)
+names(results)
+head(results$amplicon_coverage)
+```
+
+### Pools and reactions
+
+The pools in the run are read from the panel information and mapped to reactions using the panel settings. The defaults cover the MAD4HatTeR and PfPHAST pools:
+
+```{r}
+default_panel_settings()
+summarise_pools(results$panel_information)
+```
+
+Targets shared by pools in different reactions are counted in each reaction. In this run two targets are in both R1 and R2:
+
+```{r}
+panel_reactions <- assign_reactions(results$panel_information)
+panel_reactions |>
+  count(target_name) |>
+  filter(n > 1)
+```
+
+If your run uses pools that aren't in the settings, or a different reaction layout, add them with `panel_settings()`. Pools without a reaction stop the QC rather than being guessed:
+
+```{r, error = TRUE}
+bespoke_panel <- results$panel_information |>
+  mutate(pool = ifelse(pool == "R2", "myPool", pool))
+assign_reactions(bespoke_panel)
+
+settings <- panel_settings(c(myPool = "2"), base = default_panel_settings())
+assign_reactions(bespoke_panel, settings) |>
+  count(reaction)
+```
+
+### Targets excluded from QC
+
+Species identification targets and long targets are left out of the QC calculations, because they are not expected to amplify in every sample. They are still kept in the filtered allele tables.
+
+```{r}
+excluded <- qc_excluded_targets(results$panel_information, long_target_threshold = 275)
+excluded$long
+intersect(excluded$excluded, results$panel_information$target_name)
+
+panel_reactions <- panel_reactions |>
+  filter(!target_name %in% excluded$excluded)
+amplicon_coverage_qc <- results$amplicon_coverage |>
+  filter(!target_name %in% excluded$excluded)
+
+nloci_table <- count_targets_per_reaction(panel_reactions)
+nloci_table
+```
+
+### Amplification success per sample
+
+A target is successfully amplified if it has more than `read_threshold` reads. `summarise_samples()` gives the proportion of targets amplified per sample and reaction.
+
+```{r}
+amplicon_coverage_with_manifest <- merge_amplicon_coverage(amplicon_coverage_qc, manifest, panel_reactions)
+summary_samples <- summarise_samples(amplicon_coverage_with_manifest, nloci_table, manifest, read_threshold = 100)
+
+summary_samples |>
+  select(sample_name, Batch, reaction, reads_per_reaction, n_good_loci, prop_good_loci) |>
+  head()
+```
+
+Primer dimers make up most of the reads in low-density samples and in negative controls:
+
+```{r}
+sample_coverage_with_manifest <- merge_sample_coverage(results$sample_coverage, manifest)
+generate_dimer_plot(sample_coverage_with_manifest)
+```
+
+Batch2 was sequenced less deeply than Batch1:
+
+```{r}
+generate_balancing_plot(summary_samples)
+```
+
+Amplification success increases with parasitemia and read depth. The dashed lines show the reprep and repool thresholds.
+
+```{r, fig.height = 6}
+generate_parasitemia_by_amplification_success_plots(summary_samples, threshold = 100)$Batch2
+generate_reads_by_amplification_success_plots(summary_samples, read_threshold = 100)$Batch2
+```
+
+### QC calls
+
+Samples are classified per reaction: below `reprep_threshold` of targets amplified they need re-prep, below `repool_threshold` they need re-pool. Samples in the manifest with no data are marked for reprep. Negative controls are not classified.
+
+```{r}
+qc_calls <- generate_reprep_repool_table(summary_samples, reprep_threshold = 0.5, repool_threshold = 0.75) |>
+  fill_missing_data(manifest)
+
+qc_calls |>
+  filter(status != "pass") |>
+  arrange(Batch, sample_name, reaction)
+```
+
+A few things stand out. Low-parasitemia samples fail in both reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in reaction 2, which points to a problem with the reaction 2 mPCR for those wells rather than with the samples. B2_S20 is in the manifest but has no data, because it was not sequenced.
+
+The overall pass rate by batch excludes controls. Each sample is counted once, by its worst status across reactions, so B2_S05 and B2_S06 count as reprep even though reaction 1 passed:
+
+```{r, fig.width = 6}
+qc_summary_table(qc_calls)
+qc_summary_by_batch(qc_calls) |>
+  plot_qc_status_by_batch()
+```
+
+Plate maps show where samples and controls are on each plate, and help spot problems with particular wells or regions of the plate. Empty wells, such as column 12 of the Batch2 plate, are shown in black:
+
+```{r, fig.height = 6}
+quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch))
+plot_plate_layouts(quadrants)$Batch2
+
+plot_plate_heat_maps(
+  summary_samples, quadrants,
+  fill_param = "prop_good_loci", scale_midpoint = 0.5, scale_label = "prop_good_loci"
+)$Batch2
+```
+
+### Positive controls
+
+The positive controls are monoclonal 3D7, so each target should have a single allele. A small number of targets with a low-frequency second allele (here PCR errors at 2 to 4% frequency) is expected; many would suggest contamination.
+
+```{r}
+allele_data_qc <- results$allele_data |>
+  filter(!target_name %in% excluded$excluded) |>
+  add_allele_frequency()
+
+positive_controls <- summarise_positive_controls(allele_data_qc, manifest, read_filter = 0, af_filter = 0.01)
+positive_controls$category_counts
+
+positive_controls$polyclonal_information |>
+  select(sample_name, target_name, reads, AlleleFreq)
+```
+
+Raising the allele frequency filter removes these low-frequency alleles:
+
+```{r}
+summarise_positive_controls(allele_data_qc, manifest, af_filter = 0.05)$polyclonal_information
+```
+
+### Negative controls
+
+Negative controls should have few or no reads. B2_NEG1 has low-level reads at several D1 targets:
+
+```{r}
+amplicons_negative <- negative_control_amplicons(amplicon_coverage_with_manifest)
+negative_control_targets_over_threshold(amplicons_negative, negative_control_read_threshold = 50)
+
+plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2")
+```
+
+Summing reads per target across negative controls shows which targets are affected. Like the histogram, this uses the final reads after DADA2 and post-processing (`OutputPostprocessing`). In the report this plot is interactive.
+
+```{r}
+summarise_negative_control_targets(amplicons_negative, results$panel_information) |>
+  plot_negative_control_target_reads()
+```
+
+### Output tables
+
+The allele tables written by the report keep all targets, including those excluded from QC, and are filtered by reads and within-sample allele frequency:
+
+```{r}
+allele_data_filtered <- filter_allele_table(
+  results$allele_data,
+  group_cols = allele_table_group_cols()$allele_data,
+  read_filter = 0,
+  af_filter = 0.01
+)
+nrow(results$allele_data)
+nrow(allele_data_filtered)
+```
+
+Mad4hatter only writes samples with at least one final allele to the allele table, so clean negative controls are missing from it as well as samples that were not sequenced:
+
+```{r}
+samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
+```
+
+## Using your own data
+
+Point `render_qc_report()` at your Mad4hatter results directory and manifest. The manifest needs the columns `sample_name`, `SampleType` (`sample`, `positive` or `negative`), `Batch`, `Column`, `Row` and `Parasitemia`. Thresholds can be changed with the arguments of `render_qc_report()`, and pools outside MAD4HatTeR and PfPHAST need a `panel`:
+
+```{r, eval = FALSE}
+render_qc_report(
+  results_dir = "path/to/results",
+  manifest_file = "path/to/manifest.csv",
+  output_dir = "qc_output",
+  panel = panel_settings(c(AMPLseq = "1"), base = default_panel_settings()),
+  read_threshold = 50
+)
+```
