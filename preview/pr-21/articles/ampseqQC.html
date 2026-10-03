@@ -367,14 +367,16 @@ reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in
 reaction 2, which points to a problem with the reaction 2 mPCR for those
 wells rather than with the samples. B2_S20 is in the manifest but has no
 data, because it was not sequenced.</p>
-<p>The overall pass rate by batch excludes controls:</p>
+<p>The overall pass rate by batch excludes controls. Each sample is
+counted once, by its worst status across reactions, so B2_S05 and B2_S06
+count as reprep even though reaction 1 passed:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/qc_summary_by_batch.html">qc_summary_table</a></span><span class="op">(</span><span class="va">qc_calls</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 6</span></span></span>
 <span><span class="co">#&gt;   Batch   pass repool reprep total pass_rate</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Batch1    79      3     10    92      85.9</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch2    66      9     16    91      72.5</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch2    60      8     16    84      71.4</span></span>
 <span><span class="fu"><a href="../reference/qc_summary_by_batch.html">qc_summary_by_batch</a></span><span class="op">(</span><span class="va">qc_calls</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/plot_qc_status_by_batch.html">plot_qc_status_by_batch</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ampseqQC_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="100%"></p>
@@ -459,7 +461,9 @@ reads at several D1 targets:</p>
 <span><span class="fu"><a href="../reference/plot_negative_control_histogram.html">plot_negative_control_histogram</a></span><span class="op">(</span><span class="va">amplicons_negative</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Batch</span> <span class="op">==</span> <span class="st">"Batch2"</span><span class="op">)</span>, batch_name <span class="op">=</span> <span class="st">"Batch2"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ampseqQC_files/figure-html/unnamed-chunk-18-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Summing reads per target across negative controls shows which targets
-are affected. In the report this plot is interactive.</p>
+are affected. Like the histogram, this uses the final reads after DADA2
+and post-processing (<code>OutputPostprocessing</code>). In the report
+this plot is interactive.</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/summarise_negative_control_targets.html">summarise_negative_control_targets</a></span><span class="op">(</span><span class="va">amplicons_negative</span>, <span class="va">results</span><span class="op">$</span><span class="va">panel_information</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/plot_negative_control_target_reads.html">plot_negative_control_target_reads</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -481,11 +485,22 @@ allele frequency:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">allele_data</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 56236</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">allele_data_filtered</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 56234</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/missing_samples_report.html">missing_samples_report</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">allele_data</span>, <span class="va">manifest</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   sample_name  Batch SampleType Row Column Parasitemia</span></span>
-<span><span class="co">#&gt; 1      B2_S20 Batch2     sample   D      3        14.9</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 56234</span></span></code></pre></div>
+<p>Mad4hatter only writes samples with at least one final allele to the
+allele table, so clean negative controls are missing from it as well as
+samples that were not sequenced:</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/samples_missing_from_allele_data.html">samples_missing_from_allele_data</a></span><span class="op">(</span><span class="va">manifest</span>, <span class="va">results</span><span class="op">$</span><span class="va">sample_coverage</span>, <span class="va">results</span><span class="op">$</span><span class="va">allele_data</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   sample_name  Batch SampleType</span></span>
+<span><span class="co">#&gt; 1     B1_NEG1 Batch1   negative</span></span>
+<span><span class="co">#&gt; 2     B1_NEG2 Batch1   negative</span></span>
+<span><span class="co">#&gt; 3     B2_NEG2 Batch2   negative</span></span>
+<span><span class="co">#&gt; 4      B2_S20 Batch2     sample</span></span>
+<span><span class="co">#&gt;                                                                         reason</span></span>
+<span><span class="co">#&gt; 1                                   No alleles after DADA2 and post-processing</span></span>
+<span><span class="co">#&gt; 2                                   No alleles after DADA2 and post-processing</span></span>
+<span><span class="co">#&gt; 3                                   No alleles after DADA2 and post-processing</span></span>
+<span><span class="co">#&gt; 4 Not in pipeline results (not sequenced, or name does not match the manifest)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -499,7 +514,7 @@ directory and manifest. The manifest needs the columns
 Thresholds can be changed with the arguments of
 <code><a href="../reference/render_qc_report.html">render_qc_report()</a></code>, and pools outside MAD4HatTeR and
 PfPHAST need a <code>panel</code>:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/render_qc_report.html">render_qc_report</a></span><span class="op">(</span></span>
 <span>  results_dir <span class="op">=</span> <span class="st">"path/to/results"</span>,</span>
 <span>  manifest_file <span class="op">=</span> <span class="st">"path/to/manifest.csv"</span>,</span>

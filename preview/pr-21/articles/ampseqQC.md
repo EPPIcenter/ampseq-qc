@@ -320,7 +320,9 @@ which points to a problem with the reaction 2 mPCR for those wells
 rather than with the samples. B2_S20 is in the manifest but has no data,
 because it was not sequenced.
 
-The overall pass rate by batch excludes controls:
+The overall pass rate by batch excludes controls. Each sample is counted
+once, by its worst status across reactions, so B2_S05 and B2_S06 count
+as reprep even though reaction 1 passed:
 
 ``` r
 
@@ -329,7 +331,7 @@ qc_summary_table(qc_calls)
 #>   Batch   pass repool reprep total pass_rate
 #>   <chr>  <int>  <int>  <int> <int>     <dbl>
 #> 1 Batch1    79      3     10    92      85.9
-#> 2 Batch2    66      9     16    91      72.5
+#> 2 Batch2    60      8     16    84      71.4
 qc_summary_by_batch(qc_calls) |>
   plot_qc_status_by_batch()
 ```
@@ -434,7 +436,9 @@ plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"),
 ![](ampseqQC_files/figure-html/unnamed-chunk-18-1.png)
 
 Summing reads per target across negative controls shows which targets
-are affected. In the report this plot is interactive.
+are affected. Like the histogram, this uses the final reads after DADA2
+and post-processing (`OutputPostprocessing`). In the report this plot is
+interactive.
 
 ``` r
 
@@ -462,10 +466,25 @@ nrow(results$allele_data)
 #> [1] 56236
 nrow(allele_data_filtered)
 #> [1] 56234
+```
 
-missing_samples_report(results$allele_data, manifest)
-#>   sample_name  Batch SampleType Row Column Parasitemia
-#> 1      B2_S20 Batch2     sample   D      3        14.9
+Mad4hatter only writes samples with at least one final allele to the
+allele table, so clean negative controls are missing from it as well as
+samples that were not sequenced:
+
+``` r
+
+samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
+#>   sample_name  Batch SampleType
+#> 1     B1_NEG1 Batch1   negative
+#> 2     B1_NEG2 Batch1   negative
+#> 3     B2_NEG2 Batch2   negative
+#> 4      B2_S20 Batch2     sample
+#>                                                                         reason
+#> 1                                   No alleles after DADA2 and post-processing
+#> 2                                   No alleles after DADA2 and post-processing
+#> 3                                   No alleles after DADA2 and post-processing
+#> 4 Not in pipeline results (not sequenced, or name does not match the manifest)
 ```
 
 ## Using your own data

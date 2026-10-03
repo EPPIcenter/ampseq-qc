@@ -1,6 +1,7 @@
 # QC status by batch
 
-QC status by batch
+Samples are counted once, by their sample-level status from
+[`sample_qc_status()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_qc_status.md).
 
 ## Usage
 

@@ -1,7 +1,9 @@
 # Overall QC counts
 
-Counts samples (excluding positive and negative controls) with at least
-one reaction in each status.
+Counts samples (excluding positive and negative controls) by their
+sample-level status from
+[`sample_qc_status()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_qc_status.md),
+so each sample is counted once.
 
 ## Usage
 

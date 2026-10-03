@@ -202,6 +202,8 @@ Map pools to reactions and choose targets to exclude from QC.
   : Add samples and reactions with no data
 - [`samples_with_status()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/samples_with_status.md)
   : Samples with a given QC status
+- [`sample_qc_status()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_qc_status.md)
+  : Sample-level QC status
 - [`qc_status_counts()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/qc_status_counts.md)
   : Overall QC counts
 - [`qc_summary_by_batch()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/qc_summary_by_batch.md)
@@ -227,6 +229,10 @@ Map pools to reactions and choose targets to exclude from QC.
   : Filter an allele table
 - [`allele_table_group_cols()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/allele_table_group_cols.md)
   : Locus columns for Mad4hatter output tables
+- [`sample_counts_by_file()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_counts_by_file.md)
+  : Number of samples in each input file
+- [`samples_missing_from_allele_data()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/samples_missing_from_allele_data.md)
+  : Why manifest samples are missing from the allele data
 - [`missing_samples_report()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/missing_samples_report.md)
   : Samples in the manifest missing from the allele data
 - [`missing_targets_report()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/missing_targets_report.md)

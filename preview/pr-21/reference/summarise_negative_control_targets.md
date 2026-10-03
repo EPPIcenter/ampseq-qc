@@ -1,5 +1,10 @@
 # Total reads per target across negative controls
 
+Sums the final reads (`OutputPostprocessing`) for each target across all
+negative controls, the same reads used by
+[`plot_negative_control_histogram()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/plot_negative_control_histogram.md)
+and
+[`negative_control_targets_over_threshold()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/negative_control_targets_over_threshold.md).
 Targets are ordered by chromosome and insert start from the panel
 information.
 
