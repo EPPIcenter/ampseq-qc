@@ -194,12 +194,12 @@ sample names stops names that already match from being trimmed:</p>
 <span><span class="co">#&gt; [7] "resmarker_microhaplotype_table"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">amplicon_coverage</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   sample_name                 target_name reads OutputDada2</span></span>
-<span><span class="co">#&gt; 1      B1_S01  PKNH_12_v2-0198893-0199083     3           0</span></span>
-<span><span class="co">#&gt; 2      B1_S01 Pf3D7_01_v3-0145420-0145630  3183        3035</span></span>
-<span><span class="co">#&gt; 3      B1_S01 Pf3D7_01_v3-0162888-0163092   411         358</span></span>
-<span><span class="co">#&gt; 4      B1_S01 Pf3D7_01_v3-0181544-0181729  1350        1175</span></span>
-<span><span class="co">#&gt; 5      B1_S01 Pf3D7_01_v3-0194763-0194942   730         679</span></span>
-<span><span class="co">#&gt; 6      B1_S01 Pf3D7_01_v3-0455826-0456021  2651        2149</span></span>
+<span><span class="co">#&gt; 1      B1_S01  PKNH_12_v2-0198893-0199083     1           0</span></span>
+<span><span class="co">#&gt; 2      B1_S01 Pf3D7_01_v3-0145420-0145630  3330        3085</span></span>
+<span><span class="co">#&gt; 3      B1_S01 Pf3D7_01_v3-0162888-0163092   427         350</span></span>
+<span><span class="co">#&gt; 4      B1_S01 Pf3D7_01_v3-0181544-0181729  1318        1152</span></span>
+<span><span class="co">#&gt; 5      B1_S01 Pf3D7_01_v3-0194763-0194942   825         694</span></span>
+<span><span class="co">#&gt; 6      B1_S01 Pf3D7_01_v3-0455826-0456021  2329        2142</span></span>
 <span><span class="co">#&gt;   OutputPostprocessing</span></span>
 <span><span class="co">#&gt; 1                    0</span></span>
 <span><span class="co">#&gt; 2                 3002</span></span>
@@ -210,12 +210,9 @@ sample names stops names that already match from being trimmed:</p>
 <p><code><a href="../reference/sample_name_mismatches.html">check_sample_names()</a></code> compares the manifest with the
 amplicon coverage, which contains every sample that went through the
 pipeline. It stops if no names match and warns about samples that are
-only on one side. Here B2_S20 is in the manifest but was not
-sequenced:</p>
+only on one side. Here every sample matches, so there is no warning:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/sample_name_mismatches.html">check_sample_names</a></span><span class="op">(</span><span class="va">manifest</span>, <span class="va">results</span><span class="op">$</span><span class="va">amplicon_coverage</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: 1 sample(s) in the manifest are not in the Mad4hatter amplicon</span></span>
-<span><span class="co">#&gt; coverage and will be marked for reprep: B2_S20</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/sample_name_mismatches.html">check_sample_names</a></span><span class="op">(</span><span class="va">manifest</span>, <span class="va">results</span><span class="op">$</span><span class="va">amplicon_coverage</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="pools-and-reactions">Pools and reactions<a class="anchor" aria-label="anchor" href="#pools-and-reactions"></a>
@@ -357,7 +354,7 @@ classified.</p>
 <span><span class="va">qc_calls</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">status</span> <span class="op">!=</span> <span class="st">"pass"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">Batch</span>, <span class="va">sample_name</span>, <span class="va">reaction</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 68 × 8</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 73 × 8</span></span></span>
 <span><span class="co">#&gt;    sample_name Batch  SampleType reaction status reason       reads_per_reaction</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> B1_S02      Batch1 sample     1        reprep &lt; reprep th…              <span style="text-decoration: underline;">13</span>661</span></span>
@@ -370,13 +367,12 @@ classified.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> B1_S20      Batch1 sample     2        reprep &lt; reprep th…               <span style="text-decoration: underline;">1</span>751</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> B1_S24      Batch1 sample     1        reprep &lt; reprep th…               <span style="text-decoration: underline;">9</span>005</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> B1_S24      Batch1 sample     2        reprep &lt; reprep th…                947</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 58 more rows</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 63 more rows</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 1 more variable: prop_good_loci &lt;dbl&gt;</span></span></span></code></pre></div>
 <p>A few things stand out. Low-parasitemia samples fail in both
 reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in
 reaction 2, which points to a problem with the reaction 2 mPCR for those
-wells rather than with the samples. B2_S20 is in the manifest but has no
-data, because it was not sequenced.</p>
+wells rather than with the samples.</p>
 <p>The overall pass rate by batch excludes controls. Each sample is
 counted once, by its worst status across reactions, so B2_S05 and B2_S06
 count as reprep even though reaction 1 passed:</p>
@@ -386,7 +382,7 @@ count as reprep even though reaction 1 passed:</p>
 <span><span class="co">#&gt;   Batch   pass repool reprep total pass_rate</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Batch1    79      3     10    92      85.9</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch2    60      8     16    84      71.4</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Batch2    58      9     17    84      69</span></span>
 <span><span class="fu"><a href="../reference/qc_summary_by_batch.html">qc_summary_by_batch</a></span><span class="op">(</span><span class="va">qc_calls</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/plot_qc_status_by_batch.html">plot_qc_status_by_batch</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ampseqQC_files/figure-html/unnamed-chunk-15-1.png" class="r-plt" alt="" width="100%"></p>
@@ -426,14 +422,14 @@ suggest contamination.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> B1_POS1     Monoallelic   225</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> B1_POS2     2 Alleles       2</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> B1_POS2     Monoallelic   227</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> B2_POS1     2 Alleles       2</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> B2_POS1     Monoallelic   227</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> B2_POS1     2 Alleles       3</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> B2_POS1     Monoallelic   226</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> B2_POS2     2 Alleles       3</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> B2_POS2     Monoallelic   226</span></span>
 <span></span>
 <span><span class="va">positive_controls</span><span class="op">$</span><span class="va">polyclonal_information</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">sample_name</span>, <span class="va">target_name</span>, <span class="va">reads</span>, <span class="va">AlleleFreq</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 22 × 4</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 24 × 4</span></span></span>
 <span><span class="co">#&gt;    sample_name target_name                 reads AlleleFreq</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                       <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> B1_POS1     Pf3D7_05_v3-0668787-0668979   406     0.969 </span></span>
@@ -446,7 +442,7 @@ suggest contamination.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> B1_POS1     Pf3D7_14_v3-1392869-1393059    28     0.028<span style="text-decoration: underline;">1</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> B1_POS2     Pf3D7_01_v3-0455826-0456021   621     0.979 </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> B1_POS2     Pf3D7_01_v3-0455826-0456021    13     0.020<span style="text-decoration: underline;">5</span></span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 12 more rows</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 14 more rows</span></span></span></code></pre></div>
 <p>Raising the allele frequency filter removes these low-frequency
 alleles:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
@@ -465,8 +461,11 @@ reads at several D1 targets:</p>
 <code class="sourceCode R"><span><span class="va">amplicons_negative</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/negative_control_amplicons.html">negative_control_amplicons</a></span><span class="op">(</span><span class="va">amplicon_coverage_with_manifest</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/negative_control_targets_over_threshold.html">negative_control_targets_over_threshold</a></span><span class="op">(</span><span class="va">amplicons_negative</span>, negative_control_read_threshold <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   sample_name                 target_name OutputPostprocessing</span></span>
-<span><span class="co">#&gt; 1     B2_NEG1 Pf3D7_05_v3-0395919-0396103                   60</span></span>
-<span><span class="co">#&gt; 2     B2_NEG1 Pf3D7_09_v3-0685587-0685792                   51</span></span>
+<span><span class="co">#&gt; 1     B2_NEG1 Pf3D7_03_v3-0653993-0654177                   55</span></span>
+<span><span class="co">#&gt; 2     B2_NEG1 Pf3D7_05_v3-1322131-1322313                   59</span></span>
+<span><span class="co">#&gt; 3     B2_NEG1 Pf3D7_07_v3-0729507-0729725                   53</span></span>
+<span><span class="co">#&gt; 4     B2_NEG1 Pf3D7_11_v3-0115945-0116151                   60</span></span>
+<span><span class="co">#&gt; 5     B2_NEG1 Pf3D7_13_v3-1233117-1233299                   57</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/plot_negative_control_histogram.html">plot_negative_control_histogram</a></span><span class="op">(</span><span class="va">amplicons_negative</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Batch</span> <span class="op">==</span> <span class="st">"Batch2"</span><span class="op">)</span>, batch_name <span class="op">=</span> <span class="st">"Batch2"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="ampseqQC_files/figure-html/unnamed-chunk-19-1.png" class="r-plt" alt="" width="100%"></p>
@@ -493,24 +492,18 @@ allele frequency:</p>
 <span>  af_filter <span class="op">=</span> <span class="fl">0.01</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">allele_data</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 56236</span></span>
+<span><span class="co">#&gt; [1] 57960</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">allele_data_filtered</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 56234</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 57960</span></span></code></pre></div>
 <p>Mad4hatter only writes samples with at least one final allele to the
-allele table, so clean negative controls are missing from it as well as
+allele table, so clean negative controls are missing from it, as are any
 samples that were not sequenced:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/samples_missing_from_allele_data.html">samples_missing_from_allele_data</a></span><span class="op">(</span><span class="va">manifest</span>, <span class="va">results</span><span class="op">$</span><span class="va">sample_coverage</span>, <span class="va">results</span><span class="op">$</span><span class="va">allele_data</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   sample_name  Batch SampleType</span></span>
-<span><span class="co">#&gt; 1     B1_NEG1 Batch1   negative</span></span>
-<span><span class="co">#&gt; 2     B1_NEG2 Batch1   negative</span></span>
-<span><span class="co">#&gt; 3     B2_NEG2 Batch2   negative</span></span>
-<span><span class="co">#&gt; 4      B2_S20 Batch2     sample</span></span>
-<span><span class="co">#&gt;                                                                         reason</span></span>
-<span><span class="co">#&gt; 1                                   No alleles after DADA2 and post-processing</span></span>
-<span><span class="co">#&gt; 2                                   No alleles after DADA2 and post-processing</span></span>
-<span><span class="co">#&gt; 3                                   No alleles after DADA2 and post-processing</span></span>
-<span><span class="co">#&gt; 4 Not in pipeline results (not sequenced, or name does not match the manifest)</span></span></code></pre></div>
+<span><span class="co">#&gt;   sample_name  Batch SampleType                                     reason</span></span>
+<span><span class="co">#&gt; 1     B1_NEG1 Batch1   negative No alleles after DADA2 and post-processing</span></span>
+<span><span class="co">#&gt; 2     B1_NEG2 Batch1   negative No alleles after DADA2 and post-processing</span></span>
+<span><span class="co">#&gt; 3     B2_NEG2 Batch2   negative No alleles after DADA2 and post-processing</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
