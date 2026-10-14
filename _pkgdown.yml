@@ -5,9 +5,12 @@ template:
 
 navbar:
   structure:
-    left: [intro, reference, example]
+    left: [intro, custom, reference, example]
     right: [search, github]
   components:
+    custom:
+      text: Custom QC
+      href: articles/custom-qc.html
     example:
       text: Example report
       href: example-report/QC_report.html
