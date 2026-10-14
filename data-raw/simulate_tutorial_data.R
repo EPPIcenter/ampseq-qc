@@ -9,7 +9,6 @@
 #   * Batch2 is sequenced less deeply than Batch1
 #   * B2_S05 and B2_S06 have a failed reaction 2
 #   * B1_S07 is a P. vivax co-infection
-#   * B2_S20 is in the manifest but was not sequenced
 #   * B2_NEG1 has low level contamination
 #   * positive controls are monoclonal 3D7 with a few low frequency PCR errors
 
@@ -172,12 +171,9 @@ simulate_sample <- function(sample) {
   list(target_reads = target_reads, alleles = alleles, depth = depth)
 }
 
-sequenced <- manifest |>
-  filter(sample_name != "B2_S20")
+sample_results <- lapply(seq_len(nrow(manifest)), function(i) simulate_sample(manifest[i, ]))
 
-sample_results <- lapply(seq_len(nrow(sequenced)), function(i) simulate_sample(sequenced[i, ]))
-
-raw_sample_names <- sprintf("%s_S%d_L001", sequenced$sample_name, seq_len(nrow(sequenced)))
+raw_sample_names <- sprintf("%s_S%d_L001", manifest$sample_name, seq_len(nrow(manifest)))
 
 amplicon_coverage <- bind_rows(lapply(seq_along(sample_results), function(i) {
   post <- sample_results[[i]]$target_reads

@@ -1,5 +1,44 @@
-test_that("standardise_sample_names trims sequencing information", {
-  expect_equal(standardise_sample_names(c("s1_S1_L001", "my_sample_S2")), c("s1", "my_sample"))
+test_that("standardise_illumina_sample_name only removes sequencer suffixes", {
+  expect_equal(
+    standardise_illumina_sample_name(c(
+      "s1_S1_L001", "my_sample_S2", "s1_S1_L002", "B1_S01_S3_L001", "Kampala_L001_S5_L001",
+      "Site_L123", "sample_A", "ctrl_neg_2", "Pf3D7", NA
+    )),
+    c("s1", "my_sample", "s1", "B1_S01", "Kampala_L001", "Site_L123", "sample_A", "ctrl_neg_2", "Pf3D7", NA)
+  )
+})
+
+test_that("names in keep are not trimmed", {
+  expect_equal(
+    standardise_illumina_sample_name(c("B1_S01", "B1_S01_S1_L001", "B1_S02"), keep = "B1_S01"),
+    c("B1_S01", "B1_S01", "B1")
+  )
+})
+
+test_that("a warning is given when standardising merges different samples", {
+  dir <- make_results_dir(withr::local_tempdir())
+  allele_path <- file.path(dir, "allele_data.txt")
+  alleles <- utils::read.delim(allele_path)
+  extra_lane <- alleles[1, ]
+  extra_lane$sample_name <- sub("_L001$", "_L002", extra_lane$sample_name)
+  write_tsv(rbind(alleles, extra_lane), allele_path)
+
+  expect_warning(read_mad4hatter_results(dir), "made different samples identical")
+  expect_no_warning(read_mad4hatter_results(dir, standardise_sample_name = FALSE))
+})
+
+test_that("manifest sample names are matched before trimming", {
+  dir <- make_results_dir(withr::local_tempdir())
+  coverage_path <- file.path(dir, "sample_coverage.txt")
+  coverage <- utils::read.delim(coverage_path)
+  coverage$sample_name[coverage$sample_name == coverage$sample_name[1]] <- "B1_S01"
+  write_tsv(coverage, coverage_path)
+
+  trimmed <- read_mad4hatter_results(dir)
+  kept <- read_mad4hatter_results(dir, manifest_sample_names = "B1_S01")
+
+  expect_true("B1" %in% trimmed$sample_coverage$sample_name)
+  expect_true("B1_S01" %in% kept$sample_coverage$sample_name)
 })
 
 test_that("read_manifest detects the separator from the manifest", {
@@ -29,6 +68,37 @@ test_that("read_mad4hatter_results standardises sample names", {
   expect_setequal(unique(results$collapsed_allele_data$sample_name), c("s1", "s2", "PC1", "neg1"))
   expect_true(all(grepl("_L001$", raw$allele_data$sample_name)))
   expect_true(all(grepl("_L001$", raw$collapsed_allele_data$sample_name)))
+})
+
+test_that("check_sample_names warns about samples on only one side", {
+  manifest <- data.frame(sample_name = c("s1", "s2", "s3"))
+  coverage <- data.frame(sample_name = c("s1", "s2", "extra"))
+
+  mismatches <- sample_name_mismatches(manifest, coverage)
+  expect_equal(mismatches$not_in_results, "s3")
+  expect_equal(mismatches$not_in_manifest, "extra")
+  expect_equal(mismatches$n_matched, 2)
+
+  warnings <- character()
+  withCallingHandlers(
+    check_sample_names(manifest, coverage),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_length(warnings, 2)
+  expect_match(warnings[1], "in the manifest are not in the Mad4hatter amplicon coverage.*s3")
+  expect_match(warnings[2], "not in the manifest.*extra")
+
+  expect_no_warning(check_sample_names(manifest, data.frame(sample_name = c("s1", "s2", "s3"))))
+})
+
+test_that("check_sample_names errors when no names match", {
+  manifest <- data.frame(sample_name = c("s1", "s2"))
+  coverage <- data.frame(sample_name = c("s1_S1_L001", "s2_S2_L001"))
+
+  expect_error(check_sample_names(manifest, coverage), "None of the sample names")
 })
 
 test_that("optional outputs are NULL when absent", {

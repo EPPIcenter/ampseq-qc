@@ -21,7 +21,8 @@ reference:
     contents:
       - read_mad4hatter_results
       - read_manifest
-      - standardise_sample_names
+      - standardise_illumina_sample_name
+      - sample_name_mismatches
   - title: Panel settings
     desc: Map pools to reactions and choose targets to exclude from QC.
     contents:

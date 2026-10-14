@@ -34,8 +34,10 @@ render_qc_report(
 
 \item{panel}{Panel settings, see \code{\link[=panel_settings]{panel_settings()}}.}
 
-\item{standardise_sample_name}{If \code{TRUE}, sample names are trimmed to match
-the manifest, see \code{\link[=standardise_sample_names]{standardise_sample_names()}}.}
+\item{standardise_sample_name}{If \code{TRUE}, Illumina suffixes are removed
+from sample names so they match the manifest, see
+\code{\link[=standardise_illumina_sample_name]{standardise_illumina_sample_name()}}. Names already in the manifest are
+not changed.}
 
 \item{read_threshold}{Reads needed to count a target as successfully
 amplified.}
