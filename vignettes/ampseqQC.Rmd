@@ -83,7 +83,7 @@ names(results)
 head(results$amplicon_coverage)
 ```
 
-`check_sample_names()` compares the manifest with the amplicon coverage, which contains every sample that went through the pipeline. It stops if no names match and warns about samples that are only on one side. Here B2_S20 is in the manifest but was not sequenced:
+`check_sample_names()` compares the manifest with the amplicon coverage, which contains every sample that went through the pipeline. It stops if no names match and warns about samples that are only on one side. Here every sample matches, so there is no warning:
 
 ```{r}
 check_sample_names(manifest, results$amplicon_coverage)
@@ -183,7 +183,7 @@ qc_calls |>
   arrange(Batch, sample_name, reaction)
 ```
 
-A few things stand out. Low-parasitemia samples fail in both reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in reaction 2, which points to a problem with the reaction 2 mPCR for those wells rather than with the samples. B2_S20 is in the manifest but has no data, because it was not sequenced.
+A few things stand out. Low-parasitemia samples fail in both reactions. B2_S05 and B2_S06 amplified well in reaction 1 but not in reaction 2, which points to a problem with the reaction 2 mPCR for those wells rather than with the samples.
 
 The overall pass rate by batch excludes controls. Each sample is counted once, by its worst status across reactions, so B2_S05 and B2_S06 count as reprep even though reaction 1 passed:
 
@@ -260,7 +260,7 @@ nrow(results$allele_data)
 nrow(allele_data_filtered)
 ```
 
-Mad4hatter only writes samples with at least one final allele to the allele table, so clean negative controls are missing from it as well as samples that were not sequenced:
+Mad4hatter only writes samples with at least one final allele to the allele table, so clean negative controls are missing from it, as are any samples that were not sequenced:
 
 ```{r}
 samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
