@@ -2,7 +2,7 @@
 
 `ampseqQC` summarises QC statistics for targeted amplicon sequencing of Plasmodium processed with the [Mad4hatter](https://github.com/EPPIcenter/mad4hatter) pipeline. It combines the pipeline outputs with a sample manifest to produce an HTML QC report, pass/repool/reprep calls for each sample, control summaries and filtered allele tables.
 
-Documentation: <https://eppicenter.github.io/ampseq-qc/>, including a [step-by-step tutorial](https://eppicenter.github.io/ampseq-qc/articles/ampseqQC.html) and an [example report](https://eppicenter.github.io/ampseq-qc/example-report/QC_report.html).
+Documentation: <https://eppicenter.github.io/ampseq-qc/>, including [getting started](https://eppicenter.github.io/ampseq-qc/articles/ampseqQC.html), an [example report](https://eppicenter.github.io/ampseq-qc/example-report/QC_report.html) and [building a custom QC with the package functions](https://eppicenter.github.io/ampseq-qc/articles/custom-qc.html).
 
 ## Installation
 
