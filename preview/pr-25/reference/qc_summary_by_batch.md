@@ -1,0 +1,25 @@
+# QC status by batch
+
+Samples are counted once, by their sample-level status from
+[`sample_qc_status()`](https://eppicenter.github.io/ampseq-qc/preview/pr-25/reference/sample_qc_status.md).
+
+## Usage
+
+``` r
+qc_summary_by_batch(reprep_repool_summary)
+
+qc_summary_table(reprep_repool_summary)
+```
+
+## Arguments
+
+- reprep_repool_summary:
+
+  Output of
+  [`fill_missing_data()`](https://eppicenter.github.io/ampseq-qc/preview/pr-25/reference/fill_missing_data.md).
+
+## Value
+
+`qc_summary_by_batch()` returns counts and percentages per batch and
+status (excluding controls). `qc_summary_table()` returns one row per
+batch with pass, repool and reprep counts and the pass rate.
