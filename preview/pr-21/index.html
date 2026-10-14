@@ -139,8 +139,8 @@
 </h2>
 <p>All of the QC steps are exported, so they can be used outside the report, for example:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_mad4hatter_results.html">read_mad4hatter_results</a></span><span class="op">(</span><span class="st">"path/to/results"</span><span class="op">)</span></span>
-<span><span class="va">manifest</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_manifest.html">read_manifest</a></span><span class="op">(</span><span class="st">"path/to/manifest.csv"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">manifest</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_manifest.html">read_manifest</a></span><span class="op">(</span><span class="st">"path/to/manifest.csv"</span><span class="op">)</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_mad4hatter_results.html">read_mad4hatter_results</a></span><span class="op">(</span><span class="st">"path/to/results"</span>, manifest_sample_names <span class="op">=</span> <span class="va">manifest</span><span class="op">$</span><span class="va">sample_name</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">excluded</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/qc_excluded_targets.html">qc_excluded_targets</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">panel_information</span><span class="op">)</span></span>
 <span><span class="va">panel_reactions</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/assign_reactions.html">assign_reactions</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">panel_information</span><span class="op">)</span> <span class="op">|&gt;</span></span>

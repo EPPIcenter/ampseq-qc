@@ -9,7 +9,11 @@ table and the resistance marker tables are read if present and are
 ## Usage
 
 ``` r
-read_mad4hatter_results(results_dir, standardise_sample_name = TRUE)
+read_mad4hatter_results(
+  results_dir,
+  standardise_sample_name = TRUE,
+  manifest_sample_names = character()
+)
 ```
 
 ## Arguments
@@ -20,9 +24,15 @@ read_mad4hatter_results(results_dir, standardise_sample_name = TRUE)
 
 - standardise_sample_name:
 
-  If `TRUE`, sample names are trimmed with
-  [`standardise_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_sample_names.md)
-  to match the manifest.
+  If `TRUE`, Illumina suffixes are removed from sample names with
+  [`standardise_illumina_sample_name()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_illumina_sample_name.md)
+  so they match the manifest. A warning is given if this makes different
+  sample names identical.
+
+- manifest_sample_names:
+
+  Sample names from the manifest. Names that already match exactly are
+  not trimmed.
 
 ## Value
 

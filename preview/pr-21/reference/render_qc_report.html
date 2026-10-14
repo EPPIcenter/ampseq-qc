@@ -91,8 +91,10 @@ and missing sample/target reports) to <code>output_dir</code>.</p>
 
 
 <dt id="arg-standardise-sample-name">standardise_sample_name<a class="anchor" aria-label="anchor" href="#arg-standardise-sample-name"></a></dt>
-<dd><p>If <code>TRUE</code>, sample names are trimmed to match
-the manifest, see <code><a href="standardise_sample_names.html">standardise_sample_names()</a></code>.</p></dd>
+<dd><p>If <code>TRUE</code>, Illumina suffixes are removed
+from sample names so they match the manifest, see
+<code><a href="standardise_illumina_sample_name.html">standardise_illumina_sample_name()</a></code>. Names already in the manifest are
+not changed.</p></dd>
 
 
 <dt id="arg-read-threshold">read_threshold<a class="anchor" aria-label="anchor" href="#arg-read-threshold"></a></dt>

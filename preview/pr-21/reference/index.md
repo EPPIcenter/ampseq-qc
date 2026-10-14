@@ -13,8 +13,11 @@
   : Read Mad4hatter results
 - [`read_manifest()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/read_manifest.md)
   : Read a sample manifest
-- [`standardise_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_sample_names.md)
-  : Standardise sample names
+- [`standardise_illumina_sample_name()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_illumina_sample_name.md)
+  : Remove Illumina FASTQ suffixes from sample names
+- [`sample_name_mismatches()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_name_mismatches.md)
+  [`check_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_name_mismatches.md)
+  : Compare manifest and pipeline sample names
 
 ## Panel settings
 

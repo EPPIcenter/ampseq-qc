@@ -117,8 +117,8 @@ report, for example:
 
 ``` r
 
-results <- read_mad4hatter_results("path/to/results")
 manifest <- read_manifest("path/to/manifest.csv")
+results <- read_mad4hatter_results("path/to/results", manifest_sample_names = manifest$sample_name)
 
 excluded <- qc_excluded_targets(results$panel_information)
 panel_reactions <- assign_reactions(results$panel_information) |>

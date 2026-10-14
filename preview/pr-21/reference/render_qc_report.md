@@ -53,8 +53,10 @@ render_qc_report(
 
 - standardise_sample_name:
 
-  If `TRUE`, sample names are trimmed to match the manifest, see
-  [`standardise_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_sample_names.md).
+  If `TRUE`, Illumina suffixes are removed from sample names so they
+  match the manifest, see
+  [`standardise_illumina_sample_name()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_illumina_sample_name.md).
+  Names already in the manifest are not changed.
 
 - read_threshold:
 

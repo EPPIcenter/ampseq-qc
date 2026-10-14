@@ -117,8 +117,8 @@ report, for example:
 
 ``` r
 
-results <- read_mad4hatter_results("path/to/results")
 manifest <- read_manifest("path/to/manifest.csv")
+results <- read_mad4hatter_results("path/to/results", manifest_sample_names = manifest$sample_name)
 
 excluded <- qc_excluded_targets(results$panel_information)
 panel_reactions <- assign_reactions(results$panel_information) |>
@@ -168,8 +168,11 @@ This code is based on QC plots developed by
   : Read Mad4hatter results
 - [`read_manifest()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/read_manifest.md)
   : Read a sample manifest
-- [`standardise_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_sample_names.md)
-  : Standardise sample names
+- [`standardise_illumina_sample_name()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/standardise_illumina_sample_name.md)
+  : Remove Illumina FASTQ suffixes from sample names
+- [`sample_name_mismatches()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_name_mismatches.md)
+  [`check_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_name_mismatches.md)
+  : Compare manifest and pipeline sample names
 
 ## Panel settings
 

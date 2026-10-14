@@ -93,13 +93,14 @@ filtered when they are in the results directory.
 ### Loading the results
 
 [`read_mad4hatter_results()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/read_mad4hatter_results.md)
-reads the pipeline outputs and trims the sequencing information from
-sample names (for example `B1_S01_S1_L001` becomes `B1_S01`) so they
-match the manifest.
+reads the pipeline outputs and removes the parts the sequencer adds to
+FASTQ names (the sample number and lane, for example `B1_S01_S1_L001`
+becomes `B1_S01`) so they match the manifest. Passing the manifest
+sample names stops names that already match from being trimmed:
 
 ``` r
 
-results <- read_mad4hatter_results(results_dir)
+results <- read_mad4hatter_results(results_dir, manifest_sample_names = manifest$sample_name)
 names(results)
 #> [1] "sample_coverage"                "amplicon_coverage"             
 #> [3] "allele_data"                    "panel_information"             
@@ -107,12 +108,12 @@ names(results)
 #> [7] "resmarker_microhaplotype_table"
 head(results$amplicon_coverage)
 #>   sample_name                 target_name reads OutputDada2
-#> 1      B1_S01  PKNH_12_v2-0198893-0199083     3           0
-#> 2      B1_S01 Pf3D7_01_v3-0145420-0145630  3183        3035
-#> 3      B1_S01 Pf3D7_01_v3-0162888-0163092   411         358
-#> 4      B1_S01 Pf3D7_01_v3-0181544-0181729  1350        1175
-#> 5      B1_S01 Pf3D7_01_v3-0194763-0194942   730         679
-#> 6      B1_S01 Pf3D7_01_v3-0455826-0456021  2651        2149
+#> 1      B1_S01  PKNH_12_v2-0198893-0199083     1           0
+#> 2      B1_S01 Pf3D7_01_v3-0145420-0145630  3330        3085
+#> 3      B1_S01 Pf3D7_01_v3-0162888-0163092   427         350
+#> 4      B1_S01 Pf3D7_01_v3-0181544-0181729  1318        1152
+#> 5      B1_S01 Pf3D7_01_v3-0194763-0194942   825         694
+#> 6      B1_S01 Pf3D7_01_v3-0455826-0456021  2329        2142
 #>   OutputPostprocessing
 #> 1                    0
 #> 2                 3002
@@ -120,6 +121,17 @@ head(results$amplicon_coverage)
 #> 4                 1151
 #> 5                  674
 #> 6                 2134
+```
+
+[`check_sample_names()`](https://eppicenter.github.io/ampseq-qc/preview/pr-21/reference/sample_name_mismatches.md)
+compares the manifest with the amplicon coverage, which contains every
+sample that went through the pipeline. It stops if no names match and
+warns about samples that are only on one side. Here every sample
+matches, so there is no warning:
+
+``` r
+
+check_sample_names(manifest, results$amplicon_coverage)
 ```
 
 ### Pools and reactions
@@ -252,7 +264,7 @@ sample_coverage_with_manifest <- merge_sample_coverage(results$sample_coverage, 
 generate_dimer_plot(sample_coverage_with_manifest)
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-10-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-11-1.png)
 
 Batch2 was sequenced less deeply than Batch1:
 
@@ -261,7 +273,7 @@ Batch2 was sequenced less deeply than Batch1:
 generate_balancing_plot(summary_samples)
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-11-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-12-1.png)
 
 Amplification success increases with parasitemia and read depth. The
 dashed lines show the reprep and repool thresholds.
@@ -271,7 +283,7 @@ dashed lines show the reprep and repool thresholds.
 generate_parasitemia_by_amplification_success_plots(summary_samples, threshold = 100)$Batch2
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-12-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-13-1.png)
 
 ``` r
 
@@ -280,7 +292,7 @@ generate_reads_by_amplification_success_plots(summary_samples, read_threshold = 
 #> log-10 transformation introduced infinite values.
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-12-2.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-13-2.png)
 
 ### QC calls
 
@@ -297,7 +309,7 @@ qc_calls <- generate_reprep_repool_table(summary_samples, reprep_threshold = 0.5
 qc_calls |>
   filter(status != "pass") |>
   arrange(Batch, sample_name, reaction)
-#> # A tibble: 68 × 8
+#> # A tibble: 73 × 8
 #>    sample_name Batch  SampleType reaction status reason       reads_per_reaction
 #>    <chr>       <chr>  <chr>      <chr>    <chr>  <chr>                     <dbl>
 #>  1 B1_S02      Batch1 sample     1        reprep < reprep th…              13661
@@ -310,15 +322,14 @@ qc_calls |>
 #>  8 B1_S20      Batch1 sample     2        reprep < reprep th…               1751
 #>  9 B1_S24      Batch1 sample     1        reprep < reprep th…               9005
 #> 10 B1_S24      Batch1 sample     2        reprep < reprep th…                947
-#> # ℹ 58 more rows
+#> # ℹ 63 more rows
 #> # ℹ 1 more variable: prop_good_loci <dbl>
 ```
 
 A few things stand out. Low-parasitemia samples fail in both reactions.
 B2_S05 and B2_S06 amplified well in reaction 1 but not in reaction 2,
 which points to a problem with the reaction 2 mPCR for those wells
-rather than with the samples. B2_S20 is in the manifest but has no data,
-because it was not sequenced.
+rather than with the samples.
 
 The overall pass rate by batch excludes controls. Each sample is counted
 once, by its worst status across reactions, so B2_S05 and B2_S06 count
@@ -331,12 +342,12 @@ qc_summary_table(qc_calls)
 #>   Batch   pass repool reprep total pass_rate
 #>   <chr>  <int>  <int>  <int> <int>     <dbl>
 #> 1 Batch1    79      3     10    92      85.9
-#> 2 Batch2    60      8     16    84      71.4
+#> 2 Batch2    58      9     17    84      69
 qc_summary_by_batch(qc_calls) |>
   plot_qc_status_by_batch()
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-14-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-15-1.png)
 
 Plate maps show where samples and controls are on each plate, and help
 spot problems with particular wells or regions of the plate. Empty
@@ -348,7 +359,7 @@ quadrants <- create_plate_template(summary_samples, unique(summary_samples$Batch
 plot_plate_layouts(quadrants)$Batch2
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-15-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-16-1.png)
 
 ``` r
 
@@ -359,7 +370,7 @@ plot_plate_heat_maps(
 )$Batch2
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-15-2.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-16-2.png)
 
 ### Positive controls
 
@@ -383,14 +394,14 @@ positive_controls$category_counts
 #> 2 B1_POS1     Monoallelic   225
 #> 3 B1_POS2     2 Alleles       2
 #> 4 B1_POS2     Monoallelic   227
-#> 5 B2_POS1     2 Alleles       2
-#> 6 B2_POS1     Monoallelic   227
+#> 5 B2_POS1     2 Alleles       3
+#> 6 B2_POS1     Monoallelic   226
 #> 7 B2_POS2     2 Alleles       3
 #> 8 B2_POS2     Monoallelic   226
 
 positive_controls$polyclonal_information |>
   select(sample_name, target_name, reads, AlleleFreq)
-#> # A tibble: 22 × 4
+#> # A tibble: 24 × 4
 #>    sample_name target_name                 reads AlleleFreq
 #>    <chr>       <chr>                       <int>      <dbl>
 #>  1 B1_POS1     Pf3D7_05_v3-0668787-0668979   406     0.969 
@@ -403,7 +414,7 @@ positive_controls$polyclonal_information |>
 #>  8 B1_POS1     Pf3D7_14_v3-1392869-1393059    28     0.0281
 #>  9 B1_POS2     Pf3D7_01_v3-0455826-0456021   621     0.979 
 #> 10 B1_POS2     Pf3D7_01_v3-0455826-0456021    13     0.0205
-#> # ℹ 12 more rows
+#> # ℹ 14 more rows
 ```
 
 Raising the allele frequency filter removes these low-frequency alleles:
@@ -427,13 +438,16 @@ reads at several D1 targets:
 amplicons_negative <- negative_control_amplicons(amplicon_coverage_with_manifest)
 negative_control_targets_over_threshold(amplicons_negative, negative_control_read_threshold = 50)
 #>   sample_name                 target_name OutputPostprocessing
-#> 1     B2_NEG1 Pf3D7_05_v3-0395919-0396103                   60
-#> 2     B2_NEG1 Pf3D7_09_v3-0685587-0685792                   51
+#> 1     B2_NEG1 Pf3D7_03_v3-0653993-0654177                   55
+#> 2     B2_NEG1 Pf3D7_05_v3-1322131-1322313                   59
+#> 3     B2_NEG1 Pf3D7_07_v3-0729507-0729725                   53
+#> 4     B2_NEG1 Pf3D7_11_v3-0115945-0116151                   60
+#> 5     B2_NEG1 Pf3D7_13_v3-1233117-1233299                   57
 
 plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2")
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-18-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-19-1.png)
 
 Summing reads per target across negative controls shows which targets
 are affected. Like the histogram, this uses the final reads after DADA2
@@ -446,7 +460,7 @@ summarise_negative_control_targets(amplicons_negative, results$panel_information
   plot_negative_control_target_reads()
 ```
 
-![](ampseqQC_files/figure-html/unnamed-chunk-19-1.png)
+![](ampseqQC_files/figure-html/unnamed-chunk-20-1.png)
 
 ### Output tables
 
@@ -463,28 +477,22 @@ allele_data_filtered <- filter_allele_table(
   af_filter = 0.01
 )
 nrow(results$allele_data)
-#> [1] 56236
+#> [1] 57960
 nrow(allele_data_filtered)
-#> [1] 56234
+#> [1] 57960
 ```
 
 Mad4hatter only writes samples with at least one final allele to the
-allele table, so clean negative controls are missing from it as well as
+allele table, so clean negative controls are missing from it, as are any
 samples that were not sequenced:
 
 ``` r
 
 samples_missing_from_allele_data(manifest, results$sample_coverage, results$allele_data)
-#>   sample_name  Batch SampleType
-#> 1     B1_NEG1 Batch1   negative
-#> 2     B1_NEG2 Batch1   negative
-#> 3     B2_NEG2 Batch2   negative
-#> 4      B2_S20 Batch2     sample
-#>                                                                         reason
-#> 1                                   No alleles after DADA2 and post-processing
-#> 2                                   No alleles after DADA2 and post-processing
-#> 3                                   No alleles after DADA2 and post-processing
-#> 4 Not in pipeline results (not sequenced, or name does not match the manifest)
+#>   sample_name  Batch SampleType                                     reason
+#> 1     B1_NEG1 Batch1   negative No alleles after DADA2 and post-processing
+#> 2     B1_NEG2 Batch1   negative No alleles after DADA2 and post-processing
+#> 3     B2_NEG2 Batch2   negative No alleles after DADA2 and post-processing
 ```
 
 ## Using your own data
