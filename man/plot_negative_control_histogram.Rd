@@ -9,7 +9,8 @@ plot_negative_control_histogram(
   reaction_colours = default_reaction_colours,
   batch_name = NULL,
   remove_zeros = TRUE,
-  ncol_layout = 3
+  ncol_layout = 3,
+  negative_control_read_threshold = NULL
 )
 }
 \arguments{
@@ -23,6 +24,11 @@ plot_negative_control_histogram(
 \item{remove_zeros}{If \code{TRUE}, targets with no reads are not plotted.}
 
 \item{ncol_layout}{Number of facet columns.}
+
+\item{negative_control_read_threshold}{If not \code{NULL}, a dashed vertical
+line is drawn at this number of reads, the threshold above which negative
+control targets are reported (see
+\code{\link[=negative_control_targets_over_threshold]{negative_control_targets_over_threshold()}}).}
 }
 \value{
 A ggplot, or \code{NULL} if there is nothing to plot.

@@ -409,7 +409,7 @@ plot_negative_batch <- function(batch_data, batch_name = NULL) {
     "Plotting reads for %d/%d negative controls (%d had no reads)\n\n",
     plotted_negatives, total_negatives, total_negatives - plotted_negatives
   ))
-  p <- plot_negative_control_histogram(batch_data_nonzero, batch_name = batch_name)
+  p <- plot_negative_control_histogram(batch_data_nonzero, batch_name = batch_name, negative_control_read_threshold = params$negative_control_read_threshold)
   print_sized_plot(p, base_width, negative_control_plot_height(plotted_negatives))
 }
 

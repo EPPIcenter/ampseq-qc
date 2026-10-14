@@ -200,13 +200,13 @@ summarise_positive_controls(allele_data_qc, manifest, af_filter = 0.05)$polyclon
 
 ## Negative controls
 
-Negative controls should have few or no reads. B2_NEG1 has low-level reads at several D1 targets:
+Negative controls should have few or no reads. B2_NEG1 has low-level reads at several D1 targets. The dashed line shows the read threshold above which negative control targets are reported:
 
 ```{r}
 amplicons_negative <- negative_control_amplicons(amplicon_coverage_with_manifest)
 negative_control_targets_over_threshold(amplicons_negative, negative_control_read_threshold = 50)
 
-plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2")
+plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2", negative_control_read_threshold = 50)
 ```
 
 Summing reads per target across negative controls shows which targets are affected. Like the histogram, this uses the final reads after DADA2 and post-processing (`OutputPostprocessing`). In the report this plot is interactive.

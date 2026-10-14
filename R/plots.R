@@ -161,10 +161,15 @@ plot_positive_control_alleles <- function(category_counts) {
 #' @param batch_name Optional batch name for the title.
 #' @param remove_zeros If `TRUE`, targets with no reads are not plotted.
 #' @param ncol_layout Number of facet columns.
+#' @param negative_control_read_threshold If not `NULL`, a dashed vertical
+#'   line is drawn at this number of reads, the threshold above which negative
+#'   control targets are reported (see
+#'   [negative_control_targets_over_threshold()]).
 #' @return A ggplot, or `NULL` if there is nothing to plot.
 #' @export
 plot_negative_control_histogram <- function(data, reaction_colours = default_reaction_colours, batch_name = NULL,
-                                            remove_zeros = TRUE, ncol_layout = 3) {
+                                            remove_zeros = TRUE, ncol_layout = 3,
+                                            negative_control_read_threshold = NULL) {
   data <- data %>% dplyr::mutate(reaction = factor(reaction))
 
   if (remove_zeros) {
@@ -179,6 +184,7 @@ plot_negative_control_histogram <- function(data, reaction_colours = default_rea
   if (!is.finite(max_read)) max_read <- 0
 
   x_max <- if (max_read < 30) 40 else (max_read + 10)
+  if (!is.null(negative_control_read_threshold)) x_max <- max(x_max, negative_control_read_threshold + 10)
   x_limits <- c(0, x_max)
 
   total_targets <- nrow(data)
@@ -187,7 +193,7 @@ plot_negative_control_histogram <- function(data, reaction_colours = default_rea
 
   title_suffix <- if (!is.null(batch_name)) paste0(" - ", batch_name) else ""
 
-  ggplot2::ggplot(data) +
+  p <- ggplot2::ggplot(data) +
     ggplot2::geom_histogram(ggplot2::aes(x = OutputPostprocessing, fill = reaction), bins = 12, boundary = 0) +
     ggplot2::facet_wrap(~negative, ncol = ncol_layout, scales = "fixed") +
     ggplot2::xlab("Reads") +
@@ -201,6 +207,15 @@ plot_negative_control_histogram <- function(data, reaction_colours = default_rea
       strip.text = ggplot2::element_text(size = 11, face = "bold"),
       panel.spacing = ggplot2::unit(1, "lines")
     )
+
+  if (!is.null(negative_control_read_threshold)) {
+    p <- p +
+      ggplot2::geom_vline(xintercept = negative_control_read_threshold, linetype = "dashed") +
+      ggplot2::labs(caption = paste0(
+        "Dashed line: negative control read threshold (", negative_control_read_threshold, " reads)"
+      ))
+  }
+  p
 }
 
 #' Figure height for negative control histograms
