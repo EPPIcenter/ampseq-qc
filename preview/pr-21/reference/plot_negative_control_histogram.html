@@ -46,7 +46,8 @@
 <span>  reaction_colours <span class="op">=</span> <span class="va">default_reaction_colours</span>,</span>
 <span>  batch_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  remove_zeros <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  ncol_layout <span class="op">=</span> <span class="fl">3</span></span>
+<span>  ncol_layout <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  negative_control_read_threshold <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -73,6 +74,13 @@
 
 <dt id="arg-ncol-layout">ncol_layout<a class="anchor" aria-label="anchor" href="#arg-ncol-layout"></a></dt>
 <dd><p>Number of facet columns.</p></dd>
+
+
+<dt id="arg-negative-control-read-threshold">negative_control_read_threshold<a class="anchor" aria-label="anchor" href="#arg-negative-control-read-threshold"></a></dt>
+<dd><p>If not <code>NULL</code>, a dashed vertical
+line is drawn at this number of reads, the threshold above which negative
+control targets are reported (see
+<code><a href="negative_control_targets_over_threshold.html">negative_control_targets_over_threshold()</a></code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

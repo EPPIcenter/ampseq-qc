@@ -397,7 +397,8 @@ summarise_positive_controls(allele_data_qc, manifest, af_filter = 0.05)$polyclon
 ## Negative controls
 
 Negative controls should have few or no reads. B2_NEG1 has low-level
-reads at several D1 targets:
+reads at several D1 targets. The dashed line shows the read threshold
+above which negative control targets are reported:
 
 ``` r
 
@@ -410,7 +411,7 @@ negative_control_targets_over_threshold(amplicons_negative, negative_control_rea
 #> 4     B2_NEG1 Pf3D7_11_v3-0115945-0116151                   60
 #> 5     B2_NEG1 Pf3D7_13_v3-1233117-1233299                   57
 
-plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2")
+plot_negative_control_histogram(amplicons_negative |> filter(Batch == "Batch2"), batch_name = "Batch2", negative_control_read_threshold = 50)
 ```
 
 ![](custom-qc_files/figure-html/unnamed-chunk-18-1.png)

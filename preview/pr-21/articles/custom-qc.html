@@ -389,7 +389,8 @@ alleles:</p>
 <h2 id="negative-controls">Negative controls<a class="anchor" aria-label="anchor" href="#negative-controls"></a>
 </h2>
 <p>Negative controls should have few or no reads. B2_NEG1 has low-level
-reads at several D1 targets:</p>
+reads at several D1 targets. The dashed line shows the read threshold
+above which negative control targets are reported:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">amplicons_negative</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/negative_control_amplicons.html">negative_control_amplicons</a></span><span class="op">(</span><span class="va">amplicon_coverage_with_manifest</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/negative_control_targets_over_threshold.html">negative_control_targets_over_threshold</a></span><span class="op">(</span><span class="va">amplicons_negative</span>, negative_control_read_threshold <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
@@ -400,7 +401,7 @@ reads at several D1 targets:</p>
 <span><span class="co">#&gt; 4     B2_NEG1 Pf3D7_11_v3-0115945-0116151                   60</span></span>
 <span><span class="co">#&gt; 5     B2_NEG1 Pf3D7_13_v3-1233117-1233299                   57</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/plot_negative_control_histogram.html">plot_negative_control_histogram</a></span><span class="op">(</span><span class="va">amplicons_negative</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Batch</span> <span class="op">==</span> <span class="st">"Batch2"</span><span class="op">)</span>, batch_name <span class="op">=</span> <span class="st">"Batch2"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_negative_control_histogram.html">plot_negative_control_histogram</a></span><span class="op">(</span><span class="va">amplicons_negative</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">Batch</span> <span class="op">==</span> <span class="st">"Batch2"</span><span class="op">)</span>, batch_name <span class="op">=</span> <span class="st">"Batch2"</span>, negative_control_read_threshold <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></code></pre></div>
 <p><img src="custom-qc_files/figure-html/unnamed-chunk-18-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Summing reads per target across negative controls shows which targets
 are affected. Like the histogram, this uses the final reads after DADA2
