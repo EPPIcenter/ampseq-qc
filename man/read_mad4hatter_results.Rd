@@ -4,13 +4,22 @@
 \alias{read_mad4hatter_results}
 \title{Read Mad4hatter results}
 \usage{
-read_mad4hatter_results(results_dir, standardise_sample_name = TRUE)
+read_mad4hatter_results(
+  results_dir,
+  standardise_sample_name = TRUE,
+  manifest_sample_names = character()
+)
 }
 \arguments{
 \item{results_dir}{Path to the Mad4hatter results directory.}
 
-\item{standardise_sample_name}{If \code{TRUE}, sample names are trimmed with
-\code{\link[=standardise_sample_names]{standardise_sample_names()}} to match the manifest.}
+\item{standardise_sample_name}{If \code{TRUE}, Illumina suffixes are removed
+from sample names with \code{\link[=standardise_illumina_sample_name]{standardise_illumina_sample_name()}} so they match
+the manifest. A warning is given if this makes different sample names
+identical.}
+
+\item{manifest_sample_names}{Sample names from the manifest. Names that
+already match exactly are not trimmed.}
 }
 \value{
 A named list of data frames: \code{sample_coverage},

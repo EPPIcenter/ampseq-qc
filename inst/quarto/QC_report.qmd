@@ -139,7 +139,8 @@ cat("============================================\n")
 
 ```{r}
 manifest <- read_manifest(params$manifest_file)
-results <- read_mad4hatter_results(params$results_dir, params$standardise_sample_name)
+results <- read_mad4hatter_results(params$results_dir, params$standardise_sample_name, manifest$sample_name)
+sample_name_check <- suppressWarnings(check_sample_names(manifest, results$amplicon_coverage))
 
 sample_coverage <- results$sample_coverage
 amplicon_coverage <- results$amplicon_coverage
@@ -225,6 +226,26 @@ summary_samples <- summarise_samples(amplicon_coverage_with_manifest, nloci_tabl
 ```
 
 ### Sample Summary
+
+```{r}
+#| results: asis
+sample_name_warning <- function(sample_names, message) {
+  cat("::: {.callout-warning}\n## ", length(sample_names), " ", message, "\n\n", sep = "")
+  cat(paste0("`", sample_names, "`", collapse = ", "), "\n\n:::\n\n")
+}
+if (length(sample_name_check$not_in_results) > 0) {
+  sample_name_warning(
+    sample_name_check$not_in_results,
+    "sample(s) in the manifest are not in the Mad4hatter amplicon coverage and are marked for reprep"
+  )
+}
+if (length(sample_name_check$not_in_manifest) > 0) {
+  sample_name_warning(
+    sample_name_check$not_in_manifest,
+    "sample(s) in the Mad4hatter amplicon coverage are not in the manifest and are left out of the QC"
+  )
+}
+```
 
 Mad4hatter only writes a sample to the allele data when at least one allele remains after DADA2 and post-processing. Samples with no final reads, such as clean negative controls or failed samples, are therefore expected to be missing from the allele data even though they are in the coverage files.
 

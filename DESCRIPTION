@@ -27,7 +27,6 @@ Imports:
     plotly,
     purrr,
     rlang,
-    stringr,
     tibble,
     tidyr
 Suggests:

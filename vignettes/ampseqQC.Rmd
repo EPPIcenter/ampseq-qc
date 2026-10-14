@@ -75,12 +75,18 @@ The collapsed allele table and the resistance marker tables are also filtered wh
 
 ### Loading the results
 
-`read_mad4hatter_results()` reads the pipeline outputs and trims the sequencing information from sample names (for example `B1_S01_S1_L001` becomes `B1_S01`) so they match the manifest.
+`read_mad4hatter_results()` reads the pipeline outputs and removes the parts the sequencer adds to FASTQ names (the sample number and lane, for example `B1_S01_S1_L001` becomes `B1_S01`) so they match the manifest. Passing the manifest sample names stops names that already match from being trimmed:
 
 ```{r}
-results <- read_mad4hatter_results(results_dir)
+results <- read_mad4hatter_results(results_dir, manifest_sample_names = manifest$sample_name)
 names(results)
 head(results$amplicon_coverage)
+```
+
+`check_sample_names()` compares the manifest with the amplicon coverage, which contains every sample that went through the pipeline. It stops if no names match and warns about samples that are only on one side. Here B2_S20 is in the manifest but was not sequenced:
+
+```{r}
+check_sample_names(manifest, results$amplicon_coverage)
 ```
 
 ### Pools and reactions

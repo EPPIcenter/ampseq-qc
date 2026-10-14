@@ -75,8 +75,10 @@ qc_report_template <- function() {
 #' @param output_dir Directory for the report and output tables.
 #' @param output_file File name of the HTML report.
 #' @param panel Panel settings, see [panel_settings()].
-#' @param standardise_sample_name If `TRUE`, sample names are trimmed to match
-#'   the manifest, see [standardise_sample_names()].
+#' @param standardise_sample_name If `TRUE`, Illumina suffixes are removed
+#'   from sample names so they match the manifest, see
+#'   [standardise_illumina_sample_name()]. Names already in the manifest are
+#'   not changed.
 #' @param read_threshold Reads needed to count a target as successfully
 #'   amplified.
 #' @param read_filter Minimum reads per allele, for the positive control plot
@@ -120,6 +122,18 @@ render_qc_report <- function(results_dir,
   }
   if (!inherits(panel, "ampseqQC_panel_settings")) {
     stop("`panel` must be created with panel_settings() or default_panel_settings().", call. = FALSE)
+  }
+
+  # Warnings raised while Quarto renders only appear in the HTML, so sample
+  # names are also checked here
+  manifest <- read_manifest(manifest_file)
+  amplicon_coverage_file <- file.path(results_dir, "amplicon_coverage.txt")
+  if (file.exists(amplicon_coverage_file)) {
+    amplicon_coverage <- utils::read.delim(amplicon_coverage_file)
+    if (standardise_sample_name) {
+      amplicon_coverage$sample_name <- standardise_illumina_sample_name(amplicon_coverage$sample_name, manifest$sample_name)
+    }
+    check_sample_names(manifest, amplicon_coverage)
   }
 
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
