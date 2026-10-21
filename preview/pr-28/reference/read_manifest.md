@@ -2,7 +2,8 @@
 
 The manifest must contain `sample_name`, `SampleType` (`sample`,
 `positive` or `negative`), `Batch`, `Column`, `Row` and `Parasitemia`.
-Comma and semicolon separated files are supported.
+CSV (comma or semicolon), TSV, tab-delimited `.txt` and Excel (`.xlsx`,
+`.xls`, first sheet) are supported.
 
 ## Usage
 

@@ -22,8 +22,8 @@ render the report.
 ## What you need
 
 1.  The **results directory** from Mad4hatter.
-2.  A **sample manifest** (comma or semicolon separated) with one row
-    per well and the columns:
+2.  A **sample manifest** (CSV, TSV or Excel) with one row per well and
+    the columns:
 
 | Column        | Contents                                            |
 |---------------|-----------------------------------------------------|
