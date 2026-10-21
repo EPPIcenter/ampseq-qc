@@ -46,7 +46,7 @@ The **results directory** from the Mad4hatter pipeline must include:
 
 If present, **allele_data_collapsed.txt** and the **resistance_marker_module** tables are also filtered and written out.
 
-A **sample manifest** (comma or semicolon separated) must contain:
+A **sample manifest** (CSV, TSV or Excel) must contain:
 
 * **sample_name** – Unique identifier for each sample.
 * **SampleType** – Specifies whether the entry is a **sample**, **positive** control, or **negative** control.

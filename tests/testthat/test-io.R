@@ -41,14 +41,36 @@ test_that("manifest sample names are matched before trimming", {
   expect_true("B1_S01" %in% kept$sample_coverage$sample_name)
 })
 
-test_that("read_manifest detects the separator from the manifest", {
+test_that("read_manifest reads csv, tsv and excel with the same columns", {
   dir <- withr::local_tempdir()
+  expected <- fixture_manifest()
+  expected$Row <- toupper(expected$Row)
 
   comma <- read_manifest(write_manifest(file.path(dir, "comma.csv")))
   semicolon <- read_manifest(write_manifest(file.path(dir, "semicolon.csv"), sep = ";"))
+  tsv <- read_manifest(write_manifest(file.path(dir, "manifest.tsv"), sep = "\t"))
+  txt <- read_manifest(write_manifest(file.path(dir, "manifest.txt"), sep = "\t"))
 
-  expect_equal(comma, semicolon)
+  expect_equal(comma, expected)
+  expect_equal(semicolon, expected)
+  expect_equal(tsv, expected)
+  expect_equal(txt, expected)
   expect_equal(unique(comma$Row), c("A", "B", "C"))
+
+  skip_if_not_installed("writexl")
+  xlsx_path <- file.path(dir, "manifest.xlsx")
+  writexl::write_xlsx(fixture_manifest(), xlsx_path)
+  expect_equal(read_manifest(xlsx_path), expected)
+})
+
+test_that("read_manifest skips empty excel rows", {
+  skip_if_not_installed("writexl")
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  blank <- fixture_manifest()[NA_integer_, ]
+  writexl::write_xlsx(rbind(fixture_manifest(), blank, fixture_manifest()[1, ]), path)
+
+  manifest <- read_manifest(path)
+  expect_equal(manifest$sample_name, c(fixture_manifest()$sample_name, "s1"))
 })
 
 test_that("read_manifest checks required columns", {
@@ -56,6 +78,12 @@ test_that("read_manifest checks required columns", {
   utils::write.csv(fixture_manifest()[, -6], path, row.names = FALSE)
 
   expect_error(read_manifest(path), "missing required column\\(s\\): Parasitemia")
+})
+
+test_that("read_manifest rejects unsupported formats", {
+  path <- withr::local_tempfile(fileext = ".json")
+  writeLines("{}", path)
+  expect_error(read_manifest(path), "not supported")
 })
 
 test_that("read_mad4hatter_results standardises sample names", {

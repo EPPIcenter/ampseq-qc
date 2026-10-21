@@ -15,5 +15,6 @@ The manifest as a data frame, with \code{Row} in upper case.
 \description{
 The manifest must contain \code{sample_name}, \code{SampleType} (\code{sample},
 \code{positive} or \code{negative}), \code{Batch}, \code{Column}, \code{Row} and \code{Parasitemia}.
-Comma and semicolon separated files are supported.
+CSV (comma or semicolon), TSV, tab-delimited \code{.txt} and Excel (\code{.xlsx},
+\code{.xls}, first sheet) are supported.
 }

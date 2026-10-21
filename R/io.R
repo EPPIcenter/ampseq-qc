@@ -30,17 +30,19 @@ standardise_illumina_sample_name <- function(sample_names, keep = character()) {
 #'
 #' The manifest must contain `sample_name`, `SampleType` (`sample`,
 #' `positive` or `negative`), `Batch`, `Column`, `Row` and `Parasitemia`.
-#' Comma and semicolon separated files are supported.
+#' CSV (comma or semicolon), TSV, tab-delimited `.txt` and Excel (`.xlsx`,
+#' `.xls`, first sheet) are supported.
 #'
 #' @param manifest_file Path to the manifest.
 #' @return The manifest as a data frame, with `Row` in upper case.
+#' @importFrom readxl read_excel
 #' @export
 read_manifest <- function(manifest_file) {
   if (!file.exists(manifest_file)) {
     stop("Manifest not found: ", manifest_file, call. = FALSE)
   }
-  sep_guess <- if (any(grepl(";", readLines(manifest_file, n = 1)))) ";" else ","
-  manifest <- utils::read.csv(manifest_file, sep = sep_guess)
+
+  manifest <- read_manifest_table(manifest_file)
 
   required_columns <- c("sample_name", "SampleType", "Batch", "Column", "Row", "Parasitemia")
   missing_columns <- setdiff(required_columns, names(manifest))
@@ -49,7 +51,66 @@ read_manifest <- function(manifest_file) {
   }
 
   manifest %>%
-    dplyr::mutate(Row = toupper(Row))
+    dplyr::filter(!is.na(sample_name), as.character(sample_name) != "") %>%
+    dplyr::mutate(Row = toupper(as.character(Row)))
+}
+
+read_manifest_table <- function(manifest_file) {
+  ext <- tolower(tools::file_ext(manifest_file))
+  switch(
+    ext,
+    csv = read_delimited_manifest(manifest_file, csv_sep(manifest_file)),
+    tsv = read_delimited_manifest(manifest_file, "\t"),
+    txt = read_delimited_manifest(manifest_file, guess_delimited_sep(manifest_file)),
+    xlsx =,
+    xls = read_excel_manifest(manifest_file),
+    if (!nzchar(ext)) {
+      read_delimited_manifest(manifest_file, guess_delimited_sep(manifest_file))
+    } else {
+      stop(
+        "Manifest format '", ext, "' is not supported. Use csv, tsv, txt, xlsx or xls.",
+        call. = FALSE
+      )
+    }
+  )
+}
+
+csv_sep <- function(path) {
+  header <- read_header_line(path)
+  if (grepl(";", header) && !grepl(",", header)) ";" else ","
+}
+
+guess_delimited_sep <- function(path) {
+  header <- read_header_line(path)
+  counts <- c(
+    "\t" = nchar(gsub("[^\t]", "", header)),
+    ";" = nchar(gsub("[^;]", "", header)),
+    "," = nchar(gsub("[^,]", "", header))
+  )
+  if (max(counts) == 0) "," else names(counts)[which.max(counts)]
+}
+
+read_header_line <- function(path) {
+  header <- readLines(path, n = 1, warn = FALSE, encoding = "UTF-8")
+  if (length(header) == 0) "" else header
+}
+
+read_delimited_manifest <- function(path, sep) {
+  utils::read.table(
+    path,
+    header = TRUE,
+    sep = sep,
+    quote = "\"",
+    comment.char = "",
+    stringsAsFactors = FALSE,
+    check.names = TRUE
+  )
+}
+
+read_excel_manifest <- function(path) {
+  table <- readxl::read_excel(path, sheet = 1, .name_repair = "minimal")
+  table <- as.data.frame(table)
+  table[rowSums(!is.na(table)) > 0, , drop = FALSE]
 }
 
 #' Read Mad4hatter results
