@@ -1,0 +1,93 @@
+---
+title: "Getting started"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`ampseqQC` turns the outputs of the [Mad4hatter](https://github.com/EPPIcenter/mad4hatter) pipeline and a sample manifest into an HTML QC report, with pass, repool and reprep calls for every sample.
+
+**[See an example report](../example-report/QC_report.html)**.
+
+## Install
+
+```{r, eval = FALSE}
+# install.packages("remotes")
+remotes::install_github("EPPIcenter/ampseq-qc")
+```
+
+You also need the [Quarto CLI](https://quarto.org/docs/get-started/) to render the report.
+
+## What you need
+
+1. The **results directory** from Mad4hatter.
+2. A **sample manifest** (CSV, TSV or Excel) with one row per well and the columns:
+
+| Column | Contents |
+| ------ | -------- |
+| `sample_name` | Sample name, matching the names given to Mad4hatter |
+| `SampleType` | `sample`, `positive` or `negative` |
+| `Batch` | The plate or batch the sample was processed in |
+| `Column` | Plate column |
+| `Row` | Plate row |
+| `Parasitemia` | qPCR parasitemia |
+
+## Render the report
+
+```{r, eval = FALSE}
+library(ampseqQC)
+
+render_qc_report(
+  results_dir = "path/to/mad4hatter/results",
+  manifest_file = "path/to/manifest.csv",
+  output_dir = "qc_output"
+)
+```
+
+Or from the command line:
+
+```bash
+Rscript -e 'ampseqQC::render_qc_report("path/to/results", "path/to/manifest.csv", output_dir = "qc_output")'
+```
+
+To try it on the example run included with the package:
+
+```{r, eval = FALSE}
+tutorial_dir <- system.file("extdata", "tutorial", package = "ampseqQC")
+
+render_qc_report(
+  results_dir = file.path(tutorial_dir, "results"),
+  manifest_file = file.path(tutorial_dir, "manifest.csv"),
+  output_dir = "qc_output"
+)
+```
+
+`qc_output` will contain `QC_report.html` and the QC tables, including `samples_to_repool.csv`, `samples_to_reprep.csv` and `reprep_repool_summary.csv`.
+
+## Change the settings
+
+Thresholds and other settings are arguments to `render_qc_report()`. For example, to change the reads needed for a target to count as amplified and the reprep threshold:
+
+```{r, eval = FALSE}
+render_qc_report(
+  results_dir = "path/to/mad4hatter/results",
+  manifest_file = "path/to/manifest.csv",
+  output_dir = "qc_output",
+  read_threshold = 50,
+  reprep_threshold = 0.4
+)
+```
+
+All of the settings and their defaults are listed on the [`render_qc_report()` reference page](../reference/render_qc_report.html), or with `?render_qc_report` in R.
+
+The report works out which pools were run from the Mad4hatter panel information. The MAD4HatTeR and PfPHAST pools are mapped to their mPCR reactions by default; for other pools or a different reaction layout, see [`panel_settings()`](../reference/panel_settings.html).
+
+## Going further
+
+To run the QC steps yourself or build your own summaries, see [Building a custom QC with the package functions](custom-qc.html).
